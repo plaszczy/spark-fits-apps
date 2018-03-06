@@ -86,7 +86,8 @@ object HealpixProjection {
       .agg(sum($"_2"))
 
     df_index.show()
-    println(df_index.select($"_1").count())
-    println(df_index.select($"_1").distinct.count())
+    // println(df_index.select($"_1").count())
+    // println(df_index.select($"_1").distinct.count())
+    df_index.coalesce(1).rdd.saveAsTextFile("output/")
   }
 }
