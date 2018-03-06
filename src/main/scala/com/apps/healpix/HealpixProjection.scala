@@ -77,17 +77,24 @@ object HealpixProjection {
       .option("HDU", 1)
       .load(catalogFilename)
 
-    df.show()
+    // Select Ra, Dec, Z
+    val df_index = df.select($"RA", $"Dec", $"Z_COSMO")
+      .as[Point3D]
 
-    val df_index = df.select($"RA", $"Dec")
-      .as[Point2D]
-      .map(x => (grid.index(dec2theta(x.dec), ra2phi(x.ra) ), 1) )
-      .groupBy("_1")
-      .agg(sum($"_2"))
+    // Redshift boundaries
+    val redList = List(0.1, 0.2, 0.3, 0.4, 0.5)
 
-    df_index.show()
-    // println(df_index.select($"_1").count())
-    // println(df_index.select($"_1").distinct.count())
-    df_index.coalesce(1).rdd.saveAsTextFile("output/")
+    // Make shells
+    val shells = redList.slice(0, shell.size-1).zip(redList.slice(1, shell.size))
+
+    // Loop over shells, make an histogram, and save results.
+    for (pos <- shells) {
+      val start = pos(0)
+      val stop = pos(1)
+      df_index.filter(x => x.z >= start && x.z < stop) // filter in redshift space
+        .map(x => (grid.index(dec2theta(x.dec), ra2phi(x.ra) ), 1) ) // index
+        .groupBy("_1").agg(sum($"_2")) // group by pixel index and make an histogram
+        .coalesce(1).rdd.saveAsTextFile(s"output_redshift_$start_$stop/")
+    }
   }
 }
