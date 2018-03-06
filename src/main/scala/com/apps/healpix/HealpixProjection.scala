@@ -78,7 +78,7 @@ object HealpixProjection {
       .load(catalogFilename)
 
     // Select Ra, Dec, Z
-    val df_index = df.select($"RA", $"Dec", $"Z_COSMO")
+    val df_index = df.select($"RA", $"Dec", ($"Z_COSMO").as("z"))
       .as[Point3D]
 
     // Redshift boundaries
@@ -91,7 +91,7 @@ object HealpixProjection {
     for (pos <- shells) {
       val start = pos._1
       val stop = pos._2
-      df_index.filter(x => x.z_cosmo >= start && x.z_cosmo < stop) // filter in redshift space
+      df_index.filter(x => x.z >= start && x.z < stop) // filter in redshift space
         .map(x => (grid.index(dec2theta(x.dec), ra2phi(x.ra) ), 1) ) // index
         .groupBy("_1").agg(sum($"_2")) // group by pixel index and make an histogram
         .coalesce(1).rdd.saveAsTextFile(s"output_redshift_${start}_${stop}/")
