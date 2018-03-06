@@ -85,7 +85,7 @@ object HealpixProjection {
     val redList = List(0.1, 0.2, 0.3, 0.4, 0.5)
 
     // Make shells
-    val shells = redList.slice(0, shells.size-1).zip(redList.slice(1, shells.size))
+    val shells = redList.slice(0, redList.size-1).zip(redList.slice(1, redList.size))
 
     // Loop over shells, make an histogram, and save results.
     for (pos <- shells) {
