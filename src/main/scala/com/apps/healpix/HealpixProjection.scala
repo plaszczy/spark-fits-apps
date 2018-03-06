@@ -94,7 +94,7 @@ object HealpixProjection {
       df_index.filter(x => x.z >= start && x.z < stop) // filter in redshift space
         .map(x => (grid.index(dec2theta(x.dec), ra2phi(x.ra) ), 1) ) // index
         .groupBy("_1").agg(sum($"_2")) // group by pixel index and make an histogram
-        .coalesce(1).rdd.saveAsTextFile(s"output_redshift_$start_$stop/")
+        .coalesce(1).rdd.saveAsTextFile(s"output_redshift_${start}_${stop}/")
     }
   }
 }
