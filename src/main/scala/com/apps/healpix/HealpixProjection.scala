@@ -89,8 +89,8 @@ object HealpixProjection {
 
     // Loop over shells, make an histogram, and save results.
     for (pos <- shells) {
-      val start = pos(0)
-      val stop = pos(1)
+      val start = pos._1
+      val stop = pos._2
       df_index.filter(x => x.z >= start && x.z < stop) // filter in redshift space
         .map(x => (grid.index(dec2theta(x.dec), ra2phi(x.ra) ), 1) ) // index
         .groupBy("_1").agg(sum($"_2")) // group by pixel index and make an histogram
