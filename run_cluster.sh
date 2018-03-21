@@ -35,6 +35,8 @@ f2="LSST1Y"
 
 fitsfn="hdfs://134.158.75.222:8020//lsst/${f2}"
 nside=512
+replication=0
+loop=1
 
 # Run it!
 hdfs dfs -rm -r "output_redshift_*"
@@ -44,6 +46,6 @@ spark-submit \
   --jars ${SF},${HP} \
   --class com.apps.healpix.HealpixProjection \
   target/scala-${SBT_VERSION_SPARK}/HealpixProjection-assembly-${VERSION}.jar \
-  $fitsfn $nside
+  $fitsfn $nside $replication $loop
 
 # --executor-cores 17 --total-executor-cores 102 \

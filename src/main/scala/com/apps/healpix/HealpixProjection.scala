@@ -16,8 +16,13 @@
  */
 package com.apps.healpix
 
-// Import SparkSession
-import org.apache.spark.sql.{Dataset, SparkSession}
+// Scala utils
+import scala.util.Try
+
+// Spark
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.Dataset
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
 
 // Import the implicit to allow interaction with FITS
@@ -54,13 +59,47 @@ object HealpixProjection {
     result
   }
 
-  def initialize(catalogFilename : String, nside : Int) = {
+  /**
+    * Replicate the same dataset numIt times.
+    *
+    * @param df : (DataFrame)
+    *   The initial DataFrame
+    * @param catalogFilename : (String)
+    *   The catalog filename to replicate
+    * @param numIt : (Int)
+    *   The number of replication
+    * @param ind : (Int)
+    *   Internal index used for the recursion. Initialised to 0.
+    * @return (DataFrame) initial DataFrame plus the replications.
+    */
+  def replicateDataSet(session: SparkSession, df: DataFrame,
+      catalogFilename: String, numIt: Int, ind: Int = 0): DataFrame = {
+    if (ind == numIt) {
+      df
+    } else {
+      val df2 = session.readfits
+        .option("datatype", "table")
+        .option("HDU", 1)
+        .load(catalogFilename)
+        .union(df)
+      replicateDataSet(session, df2, catalogFilename, numIt, ind + 1)
+    }
+  }
+
+  def initialize(catalogFilename : String, nside : Int, replication: Int=0) = {
     val usage =
       """
-    Usage: HealpixProjection <catalogFilename> <nside>
+    Usage: HealpixProjection <catalogFilename> <nside> <replication>=0 <loop>=1
 
     // Distribute the catalog.fits on a healpix grid at nside=512
     HealpixProjection catalog.fits 512
+
+    // Replicate 10 times the catalog.fits and distribute the data
+    // on a healpix grid at nside=512
+    HealpixProjection catalog.fits 512 10
+
+    // Launch 10 times the same job
+    HealpixProjection catalog.fits 512 0 10
 
     """
 
@@ -90,8 +129,10 @@ object HealpixProjection {
       .option("HDU", 1)
       .load(catalogFilename)
 
+    val df_tot = replicateDataSet(session, df, catalogFilename, replication)
+
     // Select Ra, Dec, Z
-    val df_index = df.select($"RA", $"Dec", ($"Z_COSMO").as("z"))
+    val df_index = df_tot.select($"RA", $"Dec", ($"Z_COSMO").as("z"))
       .as[Point3D]
 
     df_index.cache()
@@ -189,15 +230,45 @@ object HealpixProjection {
     print(s"result=$result \n")
   }
 
+  /**
+    * Routine to just check the throughput
+    */
+  def ioBenchmark(jc: JobContext, loop: Int = 1) = {
+    import jc.session.implicits._
+
+    for (i <- 1 to loop) {
+      val result = jc.df_index.count()
+      print(s"result=$result \n")
+    }
+  }
+
+  /**
+    * Routine to just check the throughput
+    */
+  def ioBenchmarkWithGroupBy(jc: JobContext, loop: Int = 1) = {
+    import jc.session.implicits._
+
+    for (i <- 1 to loop) {
+      val result = jc.df_index
+        .map(x => (jc.grid.index(dec2theta(x.dec), ra2phi(x.ra) ), 1) ) // index
+        .groupBy("_1").agg(sum($"_2")) // group by pixel index and make an histogram
+        .count()
+      print(s"result=$result \n")
+    }
+  }
+
   def main(args : Array[String]): Unit = {
 
     val catalogFilename : String = args(0)
     val nside : Int = args(1).toInt
+    val replication : Int = Try{args(2).toInt}.getOrElse(0)
+    val loop : Int = Try{args(3).toInt}.getOrElse(1)
 
-    val jc = time("Intialize", initialize(catalogFilename, nside))
+    val jc = time("Intialize", initialize(catalogFilename, nside, replication))
 
     // time("job1", job1(jc))
     // val result = time("job2", job2(jc))
-    val result = time("job3", job3(jc))
+    // val result = time("job3", job3(jc))
+    val result = ioBenchmark(jc, loop)
   }
 }

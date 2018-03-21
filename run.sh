@@ -31,6 +31,8 @@ HP=lib/jhealpix.jar
 # Parameters (put your file)
 fitsfn="file://$PWD/../spark-fits/src/test/resources/test_file.fits"
 nside=512
+replication=0
+loop=1
 
 # Run it!
 spark-submit \
@@ -38,4 +40,4 @@ spark-submit \
   --jars ${SF},${HP} \
   --class com.apps.healpix.HealpixProjection \
   target/scala-${SBT_VERSION_SPARK}/HealpixProjection-assembly-${VERSION}.jar \
-  $fitsfn $nside
+  $fitsfn $nside $replication $loop
