@@ -20,5 +20,7 @@ Spark-fits library has been tested with Scala 2.10.6 and 2.11.X.
 
 Since there is no maven coordinates yet for spark-fits and healpix, you need to provide the JAR,
 and assemble the project (recipe to assemble provided in the ``run*.sh`` scripts).
-Note that we provide the JAR for healpix and spark-fits under the folder ``lib/`` at the root
+Note that we provide the JAR for healpix under the folder ``lib/`` at the root
 of the project (compiled with Scala 2.11.8) if you do not want to build yourself the libraries.
+However you need to compile yourself spark-fits and add the JAR under the folder ``lib``
+(or provide the full path).
