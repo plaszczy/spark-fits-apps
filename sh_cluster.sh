@@ -14,36 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-## SBT Version
-SBT_VERSION=2.11.8
-SBT_VERSION_SPARK=2.11
-
-## Package version
-VERSION=0.1.0
-
-# Package it
-sbt ++${SBT_VERSION} assembly
-
 # External JARS
 SF=lib/spark-fits_2.11-0.2.0.jar
 HP=lib/jhealpix.jar
 
-# Parameters (put your file)
+master="--master spark://134.158.75.222:7077"
+opt1="--driver-memory 4g --executor-memory 18g --executor-cores 17 --total-executor-cores 102"
+jars="--jars ${SF},${HP}"
+class="--class com.apps.healpix.HealpixProjection"
 
-f1="cat2149.fits"
-f2="LSST1Y"
+echo spark-shell  ${master} ${opt1} ${jars}
 
-fitsfn="hdfs://134.158.75.222:8020//lsst/${f2}"
-nside=512
-
-# Run it!
-hdfs dfs -rm -r "output_redshift_*"
-spark-submit \
-  --master spark://134.158.75.222:7077 \
-  --driver-memory 4g --executor-memory 18g --executor-cores 17 --total-executor-cores 102 \
-  --jars ${SF},${HP} \
-  --class com.apps.healpix.HealpixProjection \
-  target/scala-${SBT_VERSION_SPARK}/HealpixProjection-assembly-${VERSION}.jar \
-  $fitsfn $nside
-
-# --executor-cores 17 --total-executor-cores 102 \
