@@ -24,6 +24,7 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
+import org.apache.spark.storage.StorageLevel
 
 // Import the implicit to allow interaction with FITS
 import com.sparkfits.fits._
@@ -135,7 +136,7 @@ object HealpixProjection {
     val df_index = df_tot.select($"RA", $"Dec", ($"Z_COSMO").as("z"))
       .as[Point3D]
 
-    df_index.cache()
+    df_index.persist(StorageLevel.MEMORY_ONLY_SER)
 
     JobContext(session, grid, df_index)
   }

@@ -30,14 +30,14 @@ HP=lib/jhealpix.jar
 
 # Parameters
 nside=512
-loop=1
+loop=10
 
 # 11G, 55 GB
 for replication in 0 4; do
   fitsfn="hdfs://134.158.75.222:8020//lsst/LSST1Y"
   spark-submit \
     --master spark://134.158.75.222:7077 \
-    --driver-memory 4g --executor-memory 18g --executor-cores 17 --total-executor-cores 102 \
+    --driver-memory 4g --executor-memory 30g --executor-cores 17 --total-executor-cores 102 \
     --jars ${SF},${HP} \
     --class com.apps.healpix.HealpixProjection \
     target/scala-${SBT_VERSION_SPARK}/HealpixProjection-assembly-${VERSION}.jar \
@@ -46,11 +46,11 @@ for replication in 0 4; do
 done
 
 # 110 550 1100 GB
-for replication in 0 4 9; do
+for replication in 0 1 4 9; do
   fitsfn="hdfs://134.158.75.222:8020//user/julien.peloton/LSST10Y"
   spark-submit \
     --master spark://134.158.75.222:7077 \
-    --driver-memory 4g --executor-memory 18g --executor-cores 17 --total-executor-cores 102 \
+    --driver-memory 4g --executor-memory 30g --executor-cores 17 --total-executor-cores 102 \
     --jars ${SF},${HP} \
     --class com.apps.healpix.HealpixProjection \
     target/scala-${SBT_VERSION_SPARK}/HealpixProjection-assembly-${VERSION}.jar \
