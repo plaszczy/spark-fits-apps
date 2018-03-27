@@ -22,7 +22,7 @@ SBT_VERSION_SPARK=2.11
 VERSION=0.1.0
 
 # Package it
-sbt ++${SBT_VERSION} assembly
+sbt ++${SBT_VERSION} package
 
 # External JARS
 SF=lib/spark-fits_2.11-0.2.0.jar
@@ -39,5 +39,5 @@ spark-submit \
   --master local[*] \
   --jars ${SF},${HP} \
   --class com.apps.healpix.HealpixProjection \
-  target/scala-${SBT_VERSION_SPARK}/HealpixProjection-assembly-${VERSION}.jar \
+  target/scala-${SBT_VERSION_SPARK}/healpixprojection_${SBT_VERSION_SPARK}-${VERSION}.jar \
   $fitsfn $nside $replication $loop

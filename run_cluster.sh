@@ -22,17 +22,15 @@ SBT_VERSION_SPARK=2.11
 VERSION=0.1.0
 
 # Package it
-sbt ++${SBT_VERSION} assembly
+sbt ++${SBT_VERSION} package
 
 # External JARS
 SF=lib/spark-fits_2.11-0.2.0.jar
 HP=lib/jhealpix.jar
 
 # Parameters (put your file)
-
 f1="cat2149.fits"
 f2="LSST1Y"
-
 fitsfn="hdfs://134.158.75.222:8020//lsst/${f2}"
 nside=512
 replication=0
@@ -45,7 +43,5 @@ spark-submit \
   --driver-memory 4g --executor-memory 18g --executor-cores 17 --total-executor-cores 102 \
   --jars ${SF},${HP} \
   --class com.apps.healpix.HealpixProjection \
-  target/scala-${SBT_VERSION_SPARK}/HealpixProjection-assembly-${VERSION}.jar \
+  target/scala-${SBT_VERSION_SPARK}/healpixprojection_${SBT_VERSION_SPARK}-${VERSION}.jar \
   $fitsfn $nside $replication $loop
-
-# --executor-cores 17 --total-executor-cores 102 \
