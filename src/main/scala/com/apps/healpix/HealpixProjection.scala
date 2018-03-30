@@ -81,6 +81,7 @@ object HealpixProjection {
       val df2 = session.readfits
         .option("datatype", "table")
         .option("HDU", 1)
+        .option("columns", List("RA", "DEC", "Z_COSMO"))
         .load(catalogFilename)
         .union(df)
       replicateDataSet(session, df2, catalogFilename, numIt, ind + 1)
@@ -128,6 +129,7 @@ object HealpixProjection {
     val df = session.readfits
       .option("datatype", "table")
       .option("HDU", 1)
+      .option("columns", List("RA", "DEC", "Z_COSMO"))
       .load(catalogFilename)
 
     val df_tot = replicateDataSet(session, df, catalogFilename, replication)
@@ -136,12 +138,10 @@ object HealpixProjection {
     val df_index = df_tot.select($"RA", $"Dec", ($"Z_COSMO").as("z"))
       .as[Point3D]
 
-    df_index.persist(StorageLevel.MEMORY_ONLY_SER)
-
     JobContext(session, grid, df_index)
   }
 
-  def job1(jc: JobContext) = {
+  def redshiftShell(jc: JobContext, loop: Int = 1) = {
     import jc.session.implicits._
 
     // Redshift boundaries
@@ -150,19 +150,51 @@ object HealpixProjection {
     // Make shells
     val shells = redList.slice(0, redList.size-1).zip(redList.slice(1, redList.size))
 
-    // Loop over shells, make an histogram, and save results.
-    for (pos <- shells) {
-      val start = pos._1
-      val stop = pos._2
-      jc.df_index.filter(x => x.z >= start && x.z < stop) // filter in redshift space
-        .map(x => (jc.grid.index(dec2theta(x.dec), ra2phi(x.ra) ), 1) ) // index
-        .groupBy("_1").agg(sum($"_2")) // group by pixel index and make an histogram
-        .coalesce(1).rdd.saveAsTextFile(s"output_redshift_${start}_${stop}/")
+    val df_indexed = jc.df_index
+                       .map(x => (jc.grid.index(dec2theta(x.dec), ra2phi(x.ra)), x.z, 1))
+                       .persist(StorageLevel.MEMORY_ONLY_SER)
+
+    for (l <- 1 to loop) {
+      // Loop over shells, make an histogram, and save results.
+      for (pos <- shells) {
+        val start = pos._1
+        val stop = pos._2
+        val result = df_indexed.filter(x => x._2 >= start && x._2 < stop) // filter in redshift space
+          .groupBy("_1").agg(sum($"_3")) // group by pixel index and make an histogram
+          .count()
+        print(s"result=$result \n")
+      }
     }
+  }
+
+  def neighbours(jc: JobContext, loop: Int = 1) = {
+      import jc.session.implicits._
+      val df_indexed = jc.df_index
+                         .map(x => (jc.grid.index(dec2theta(x.dec), ra2phi(x.ra)), 1))
+                         .persist(StorageLevel.MEMORY_ONLY_SER)
+
+      var ptg = new ExtPointing
+      ptg.phi = 0.0
+      ptg.theta = 0.0
+
+      val radius = 0.017
+      val selectedPixels = jc.grid.hp.queryDisc(ptg, radius)
+      val sp = jc.session.sparkContext.broadcast(selectedPixels)
+      //println("size", sp.value.size)
+
+      var counts = Array[Int]()
+
+      import Array._
+      for (l <- 1 to loop) {
+          val result = df_indexed.filter(x => sp.value.contains(x._1)) //sp.value.contains(x._1))
+                                 .count()
+          print(s"count=${result.toInt}\n")
+      }
   }
 
   def job2(jc: JobContext) = {
     import jc.session.implicits._
+    jc.df_index.persist(StorageLevel.MEMORY_ONLY_SER)
 
     // Redshift boundaries
     // val redList = List(0.1, 0.2, 0.3, 0.4, 0.5)
@@ -206,6 +238,7 @@ object HealpixProjection {
 
   def job3(jc: JobContext) = {
     import jc.session.implicits._
+    jc.df_index.persist(StorageLevel.MEMORY_ONLY_SER)
 
     val firstShell = 0.1
     val lastShell = 0.5
@@ -236,6 +269,7 @@ object HealpixProjection {
     */
   def ioBenchmark(jc: JobContext, loop: Int = 1) = {
     import jc.session.implicits._
+    jc.df_index.persist(StorageLevel.MEMORY_ONLY_SER)
 
     for (i <- 1 to loop) {
       val result = jc.df_index.count()
@@ -248,6 +282,7 @@ object HealpixProjection {
     */
   def ioBenchmarkWithGroupBy(jc: JobContext, loop: Int = 1) = {
     import jc.session.implicits._
+    jc.df_index.persist(StorageLevel.MEMORY_ONLY_SER)
 
     for (i <- 1 to loop) {
       val result = jc.df_index
@@ -267,9 +302,11 @@ object HealpixProjection {
 
     val jc = time("Intialize", initialize(catalogFilename, nside, replication))
 
-    // time("job1", job1(jc))
+    // time("job1", redshiftShell(jc, loop))
     // val result = time("job2", job2(jc))
     // val result = time("job3", job3(jc))
     val result = ioBenchmark(jc, loop)
+    // val result = redshiftShell(jc, loop)
+    // val result = neighbours(jc, loop)
   }
 }
