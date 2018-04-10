@@ -78,7 +78,7 @@ object HealpixProjection {
       val df2 = session.read
         .format("com.sparkfits")
         .option("hdu", 1)
-        .option("columns", List("RA,DEC,Z_COSMO"))
+        .option("columns", "RA,DEC,Z_COSMO")
         .load(catalogFilename)
         .union(df)
       replicateDataSet(session, df2, catalogFilename, numIt, ind + 1)
@@ -126,7 +126,7 @@ object HealpixProjection {
     val df = session.read
       .format("com.sparkfits")
       .option("hdu", 1)
-      .option("columns", List("RA,DEC,Z_COSMO"))
+      .option("columns", "RA,DEC,Z_COSMO")
       .load(catalogFilename)
 
     val df_tot = replicateDataSet(session, df, catalogFilename, replication)
