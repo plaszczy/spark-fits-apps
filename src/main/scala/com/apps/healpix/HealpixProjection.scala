@@ -26,9 +26,6 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
 import org.apache.spark.storage.StorageLevel
 
-// Import the implicit to allow interaction with FITS
-import com.sparkfits.fits._
-
 // Healpix library
 import healpix.essentials.HealpixBase
 import healpix.essentials.Pointing
@@ -78,10 +75,10 @@ object HealpixProjection {
     if (ind == numIt) {
       df
     } else {
-      val df2 = session.readfits
-        .option("datatype", "table")
-        .option("HDU", 1)
-        .option("columns", List("RA", "DEC", "Z_COSMO"))
+      val df2 = session.read
+        .format("com.sparkfits")
+        .option("hdu", 1)
+        .option("columns", List("RA,DEC,Z_COSMO"))
         .load(catalogFilename)
         .union(df)
       replicateDataSet(session, df2, catalogFilename, numIt, ind + 1)
@@ -127,9 +124,8 @@ object HealpixProjection {
 
     // Data
     val df = session.readfits
-      .option("datatype", "table")
-      .option("HDU", 1)
-      .option("columns", List("RA", "DEC", "Z_COSMO"))
+      .option("hdu", 1)
+      .option("columns", List("RA,DEC,Z_COSMO"))
       .load(catalogFilename)
 
     val df_tot = replicateDataSet(session, df, catalogFilename, replication)
@@ -305,7 +301,7 @@ object HealpixProjection {
     // time("job1", redshiftShell(jc, loop))
     // val result = time("job2", job2(jc))
     // val result = time("job3", job3(jc))
-    val result = ioBenchmark(jc, loop)
+    val result = time("benchmark", ioBenchmark(jc, loop))
     // val result = redshiftShell(jc, loop)
     // val result = neighbours(jc, loop)
   }
