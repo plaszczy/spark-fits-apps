@@ -123,7 +123,8 @@ object HealpixProjection {
     val grid = HealpixGrid(nside, hp, ptg)
 
     // Data
-    val df = session.readfits
+    val df = session.read
+      .format("com.sparkfits")
       .option("hdu", 1)
       .option("columns", List("RA,DEC,Z_COSMO"))
       .load(catalogFilename)
