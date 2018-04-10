@@ -8,17 +8,6 @@
 #SBATCH -A m1727
 
 module load spark
-module load sbt
-
-## SBT Version
-SBT_VERSION=2.11.8
-SBT_VERSION_SPARK=2.11
-
-## Package version
-VERSION=0.1.0
-
-# Package it
-sbt ++${SBT_VERSION} package
 
 # External JARS
 SF=lib/spark-fits_2.11-0.2.0.jar
@@ -38,9 +27,8 @@ for replication in 0 4 9; do
     --master $SPARKURL \
     --driver-memory 15g --executor-memory 50g --executor-cores 32 --total-executor-cores 192 \
     --jars ${SF},${HP} \
-    --class com.apps.healpix.HealpixProjection \
-    target/scala-${SBT_VERSION_SPARK}/healpixprojection_${SBT_VERSION_SPARK}-${VERSION}.jar \
-    $fitsfn $nside $replication $loop
+    src/main/python/com/apps/healpix/HealpixProjection.py\
+    -inputpath $fitsfn -nside $nside -replication $replication -loop $loop
   wait
 done
 
