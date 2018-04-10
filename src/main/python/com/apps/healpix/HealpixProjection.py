@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pyspark.sql import SparkSession
+from pyspark.sql.functions import *
 from pyspark import StorageLevel
 
 import argparse
@@ -129,7 +130,9 @@ if __name__ == "__main__":
     ## Next action call will cache the data
     df_tot = replicatedataset(spark, df, args.inputpath, args.replication)
 
-    df_tot.persist(StorageLevel.MEMORY_ONLY_SER)
+    df_tot.select(col("RA"), col("Dec"), col("Z_COSMO").alias("z"))\
+        .persist(StorageLevel.MEMORY_ONLY_SER)
+
     ## Loop over iterations
     for loop in range(args.loop):
         result = df_tot.count()
