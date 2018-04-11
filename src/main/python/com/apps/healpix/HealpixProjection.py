@@ -69,7 +69,7 @@ def replicatedataset(spark, df, inputpath, numit, ind=0):
             .option("hdu", 1)\
             .load(inputpath)\
             .union(df)
-        replicatedataset(sparksession, df2, inputpath, numit, ind+1)
+        return replicatedataset(spark, df2, inputpath, numit, ind+1)
 
 
 def addargs(parser):
@@ -128,9 +128,9 @@ if __name__ == "__main__":
         .load(args.inputpath)
 
     ## Next action call will cache the data
-    df_tot = replicatedataset(spark, df, args.inputpath, args.replication)
+    df = replicatedataset(spark, df, args.inputpath, args.replication)
 
-    df_tot.select(col("RA"), col("Dec"), col("Z_COSMO").alias("z"))\
+    df_tot = df.select(col("RA"), col("Dec"), col("Z_COSMO").alias("z"))\
         .persist(StorageLevel.MEMORY_ONLY_SER)
 
     ## Loop over iterations

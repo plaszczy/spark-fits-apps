@@ -138,6 +138,55 @@ object HealpixProjection {
     JobContext(session, grid, df_index)
   }
 
+  def intersection(session: SparkSession, cat1: String, replication: Int, nside: Int, loop: Int = 1) = {
+    // Set to Level.WARN is you want verbosity
+    Logger.getLogger("org").setLevel(Level.OFF)
+    Logger.getLogger("akka").setLevel(Level.OFF)
+
+    import session.implicits._
+
+    // Initialise the Pointing object
+    var ptg = new ExtPointing
+
+    // Initialise HealpixBase functionalities
+    val hp = new HealpixBase(nside, RING)
+
+    // Instantiate the grid
+    val grid = HealpixGrid(nside, hp, ptg)
+
+    // Data
+    val df1 = session.read
+      .format("com.sparkfits")
+      .option("HDU", 1)
+      .option("columns", "RA,DEC")
+      .load(cat1)
+
+    // Replicate and select Ra, Dec, Z
+    val df1_tot = replicateDataSet(session, df1, cat1, replication)
+    // Label 1 for initial catalog
+    // val ini_cat = df1_tot.withColumn("z", df1_tot("RA")*0.0 + 1.0)
+
+    // Take a sample of the first one (ideally would be another one!)
+    // val tmp = df1_tot.sample(false, 0.0001).toDF
+    val tmp = session.read
+      .format("com.sparkfits")
+      .option("HDU", 1)
+      .option("columns", "RA,DEC")
+      .load("hdfs://134.158.75.222:8020//lsst/LSST10Y/out_srcs_s1_0.fits")
+      // .load("file:///Users/julien/Documents/workspace/myrepos/spark-fits/src/test/resources/colore.fits")
+      // .sample(false, 0.7).toDF
+
+
+    val df_union = df1_tot.union(tmp).as[Point2D].map(
+      x => (grid.index(dec2theta(x.dec), ra2phi(x.ra)), x.ra, x.dec)).persist(
+        StorageLevel.MEMORY_ONLY_SER)
+
+    for (l <- 1 to loop) {
+      val result = df_union.groupBy("_1").count().filter($"count" > 1.0).count()
+      println(s"count=${result.toInt}\n")
+    }
+  }
+
   def redshiftShell(jc: JobContext, loop: Int = 1) = {
     import jc.session.implicits._
 
@@ -302,8 +351,11 @@ object HealpixProjection {
     // time("job1", redshiftShell(jc, loop))
     // val result = time("job2", job2(jc))
     // val result = time("job3", job3(jc))
+
+    // Benchmark paper
     val result = time("benchmark", ioBenchmark(jc, loop))
     // val result = redshiftShell(jc, loop)
     // val result = neighbours(jc, loop)
+    // val result = intersection(jc.session, catalogFilename, replication, nside, loop)
   }
 }
