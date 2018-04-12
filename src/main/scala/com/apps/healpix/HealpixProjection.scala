@@ -157,7 +157,7 @@ object HealpixProjection {
     // Data
     val df1 = session.read
       .format("com.sparkfits")
-      .option("HDU", 1)
+      .option("hdu", 1)
       .option("columns", "RA,DEC")
       .load(cat1)
 
@@ -170,7 +170,7 @@ object HealpixProjection {
     // val tmp = df1_tot.sample(false, 0.0001).toDF
     val tmp = session.read
       .format("com.sparkfits")
-      .option("HDU", 1)
+      .option("hdu", 1)
       .option("columns", "RA,DEC")
       .load("hdfs://134.158.75.222:8020//lsst/LSST10Y/out_srcs_s1_0.fits")
       // .load("file:///Users/julien/Documents/workspace/myrepos/spark-fits/src/test/resources/colore.fits")
