@@ -16,6 +16,7 @@ from pyspark.sql.functions import *
 from pyspark import StorageLevel
 
 import argparse
+from time import time
 
 def quiet_logs(sc, log_level="ERROR"):
     """
@@ -135,5 +136,7 @@ if __name__ == "__main__":
 
     ## Loop over iterations
     for loop in range(args.loop):
+        t0 = time()
         result = df_tot.count()
-        print(result)
+        t1 = time()
+        print(result, t1-t0, "seconds")
