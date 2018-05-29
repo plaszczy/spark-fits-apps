@@ -353,8 +353,8 @@ object HealpixProjection {
     // val result = time("job3", job3(jc))
 
     // Benchmark paper
-    val result = time("benchmark", ioBenchmark(jc, loop))
-    // val result = redshiftShell(jc, loop)
+    //val result = time("benchmark", ioBenchmark(jc, loop))
+    val result = redshiftShell(jc, loop)
     // val result = neighbours(jc, loop)
     // val result = intersection(jc.session, catalogFilename, replication, nside, loop)
   }

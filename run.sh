@@ -25,11 +25,11 @@ VERSION=0.1.0
 sbt ++${SBT_VERSION} package
 
 # External JARS
-SF=lib/spark-fits_2.11-0.2.0.jar
+SF=lib/spark-fits_2.11-0.4.0.jar
 HP=lib/jhealpix.jar
 
 # Parameters (put your file)
-fitsfn="file://$PWD/../spark-fits/src/test/resources/test_file.fits"
+fitsfn="file:/home/plaszczy/fits/galbench_srcs_s1_0.fits"
 nside=512
 replication=0
 loop=1
