@@ -1,10 +1,13 @@
 
 from pyspark.sql import SparkSession
+from pyspark.sql import SQLContext
+
 from pyspark import StorageLevel
 
-from pyspark.sql import SQLContext,Window
 
 
+import matplotlib.pyplot as plt
+import numpy as np
 from time import time
 
 
