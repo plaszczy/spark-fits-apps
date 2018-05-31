@@ -3,8 +3,7 @@ from pyspark.sql import SparkSession
 from pyspark import StorageLevel
 
 from pyspark.sql import SQLContext,Window
-from pyspark.sql import functions as F
-from pyspark.sql.types import IntegerType
+
 
 from time import time
 
@@ -22,6 +21,7 @@ logger.LogManager.getLogger("akka").setLevel(level)
 
 
 #read fits files
+from pyspark.sql import functions as F
 gal=spark.read.format("com.sparkfits").option("hdu",1)\
      .load("/home/plaszczy/fits/galbench_srcs_s1_0.fits")\
      .select(F.col("RA"), F.col("Dec"), (F.col("Z_COSMO")+F.col("DZ_RSD")).alias("z"))\
@@ -60,6 +60,7 @@ dz=(zmax-zmin)/Nbins
 # add bin column
 #df
 gal.select(gal.z,((gal['z']-zmin)/dz).astype('int').alias('bin')).show()
+from pyspark.sql.types import IntegerType
 zbin=gal.select(gal.z,((gal['z']-zmin)/dz).cast(IntegerType()).alias('bin'))
 #udf
 binNumber=F.udf(lambda z: int((z-zmin)/dz))
@@ -70,9 +71,14 @@ gal.select("z").rdd.map(lambda z: (z[0],int((z[0]-zmin)/dz))).take(10)
 
 #count
 h=zbin.groupBy("bin").count().orderBy(F.asc("bin")).collect()
+h[66]['count']
 
 #rdd
+from operator import add
+h=zbin.select("bin").rdd.map(lambda r:(r[0],1)).reduceByKey(add)
 
+h=zbin.select("bin").rdd.map(lambda r:(r[0],1)).countByKey()
+plot(h.keys,k,values)
 
 
 #add gaussian smearing
