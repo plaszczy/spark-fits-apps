@@ -11,6 +11,7 @@ import numpy as np
 from time import time
 
 
+
 spark = SparkSession.builder.getOrCreate()
 sc=spark.sparkContext
 
@@ -22,16 +23,19 @@ level = getattr(logger.Level, "WARN")
 logger.LogManager.getLogger("org"). setLevel(level)
 logger.LogManager.getLogger("akka").setLevel(level)
 
-
 #read fits files
+f="hdfs://134.158.75.222:8020//lsst/LSST10Y"
+f="/home/plaszczy/fits/galbench_srcs_s1_0.fits"
 from pyspark.sql import functions as F
 gal=spark.read.format("com.sparkfits").option("hdu",1)\
-     .load("/home/plaszczy/fits/galbench_srcs_s1_0.fits")\
+     .load(f)\
      .select(F.col("RA"), F.col("Dec"), (F.col("Z_COSMO")+F.col("DZ_RSD")).alias("z"))\
      .cache()
 #    .persist(StorageLevel.MEMORY_ONLY_SER)
 
 gal.printSchema()
+gal.columns
+gal.dtypes
 gal.show(10)
 
 #get all statitics on z
