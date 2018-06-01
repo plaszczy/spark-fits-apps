@@ -35,8 +35,8 @@ from pyspark.sql import functions as F
 gal=spark.read.format("com.sparkfits").option("hdu",1)\
      .load(f)\
      .select(F.col("RA"), F.col("Dec"), (F.col("Z_COSMO")+F.col("DZ_RSD")).alias("z"))\
-     .cache()
-#    .persist(StorageLevel.MEMORY_ONLY_SER)
+     .persist(StorageLevel.MEMORY_ONLY_SER)
+#     .cache()
 
 gal.printSchema()
 gal.columns
