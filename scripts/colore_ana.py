@@ -35,7 +35,7 @@ gal.printSchema()
 gal.show(10)
 
 #get all statitics on z
-stat=gal.describe(['z'])
+gal.describe(['z']).show()
 
 gal.summary().show()
 #get some base statitics on z
@@ -62,26 +62,27 @@ dz=(zmax-zmin)/Nbins
 
 # add bin column
 #df
-gal.select(gal.z,((gal['z']-zmin)/dz).astype('int').alias('bin')).show()
+gal.select(gal.z,((gal['z']-zmin)/dz).astype('int').alias('bin'))
 from pyspark.sql.types import IntegerType
 zbin=gal.select(gal.z,((gal['z']-zmin)/dz).cast(IntegerType()).alias('bin'))
 #udf
 binNumber=F.udf(lambda z: int((z-zmin)/dz))
 gal.select(gal.z,binNumber(gal.z).alias('bin'))
-
 #rdd
 gal.select("z").rdd.map(lambda z: (z[0],int((z[0]-zmin)/dz))).take(10)
 
 #count
-h=zbin.groupBy("bin").count().orderBy(F.asc("bin")).collect()
-h[66]['count']
+h=zbin.groupBy("bin").count().orderBy(F.asc("bin"))
+
+histo=h.toPandas()
+plt.plot(x,y)
 
 #rdd
 from operator import add
 h=zbin.select("bin").rdd.map(lambda r:(r[0],1)).reduceByKey(add)
 
 h=zbin.select("bin").rdd.map(lambda r:(r[0],1)).countByKey()
-plot(h.keys,k,values)
+#plt.plot(h.keys(),k,values())
 
 
 #add gaussian smearing
