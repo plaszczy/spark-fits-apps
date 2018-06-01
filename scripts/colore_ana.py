@@ -92,15 +92,6 @@ import numpy as np
 #plt.plot(h.keys(),k,values())
 time_me(ana)
 
-def hist_spark(df,col,Nbin):
-    minmax=df.select(F.min(col),F.max(col)).first()
-    zmin=minmax[0]
-    zmax=minmax[1]
-    dz=(zmax-zmin)/Nbins
-    zbin=df.select(df[col],((df[col]-zmin)/dz).astype('int').alias('bin')).cache()
-    h=zbin.groupBy("bin").count().orderBy(F.asc("bin"))
-    return h.toPandas()
-
 ana="tomographie"
 shell=gal.filter(gal['z'].between(0.1,0.2))
 time_me(ana)
