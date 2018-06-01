@@ -66,14 +66,14 @@ dz=(zmax-zmin)/Nbins
 
 # add bin column
 #df
-gal.select(gal.z,((gal['z']-zmin)/dz).astype('int').alias('bin'))
+zbin=gal.select(gal.z,((gal['z']-zmin)/dz).astype('int').alias('bin')).cache()
 from pyspark.sql.types import IntegerType
-zbin=gal.select(gal.z,((gal['z']-zmin)/dz).cast(IntegerType()).alias('bin'))
+zbin=gal.select(gal.z,((gal['z']-zmin)/dz).cast(IntegerType()).alias('bin')).cache()
 #udf
 binNumber=F.udf(lambda z: int((z-zmin)/dz))
-gal.select(gal.z,binNumber(gal.z).alias('bin'))
+zbin=gal.select(gal.z,binNumber(gal.z).alias('bin')).cache()
 #rdd
-gal.select("z").rdd.map(lambda z: (z[0],int((z[0]-zmin)/dz))).take(10)
+zbin=gal.select("z").rdd.map(lambda z: (z[0],int((z[0]-zmin)/dz))).cache()
 
 #count
 h=zbin.groupBy("bin").count().orderBy(F.asc("bin"))
