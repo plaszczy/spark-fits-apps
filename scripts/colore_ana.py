@@ -1,6 +1,7 @@
 #input
 #f="hdfs://134.158.75.222:8020//lsst/LSST10Y"
-f="/home/plaszczy/fits/galbench_srcs_s1_0.fits"
+import os
+f=os.environ.get("fitsdir","/home/plaszczy/fits/galbench_srcs_s1_0.fits")
 
 #initialisations
 from pyspark.sql import SparkSession
@@ -25,11 +26,11 @@ def time_me(s):
     global t0
     t1=time()
     print("-"*30)
-    print(ana+":{:2.2f} s".format(t1-t0))
+    print(ana+"& {:2.1f} \\".format(t1-t0))
     print("-"*30)
     t0=t1
 
-ana="load"
+ana="load (HDU)+show"
 from pyspark.sql import functions as F
 gal=spark.read.format("com.sparkfits").option("hdu",1)\
      .load(f)\
@@ -67,7 +68,7 @@ Nbins=100
 dz=(zmax-zmin)/Nbins
 time_me(ana)
 
-ana="add bin column"
+ana="dN/Dz histogram"
 #df
 #zbin=gal.select(gal.z,((gal['z']-zmin)/dz).astype('int').alias('bin')).cache()
 from pyspark.sql.types import IntegerType
@@ -78,9 +79,6 @@ zbin=gal.select(gal.z,((gal['z']-zmin)/dz).cast(IntegerType()).alias('bin')).cac
 #via rdd
 #zbin=gal.select("z").rdd.map(lambda z: (z[0],int((z[0]-zmin)/dz))).cache()
 
-time_me(ana)
-
-ana="histo count"
 h=zbin.groupBy("bin").count().orderBy(F.asc("bin"))
 histo=h.toPandas()
 import matplotlib.pyplot as plt

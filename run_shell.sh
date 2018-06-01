@@ -14,8 +14,8 @@
 # limitations under the License.
 
 # Parameters (put your file)
-fitsdir="hdfs://134.158.75.222:8020//lsst/LSST10Y"
-
+export fitsdir="hdfs://134.158.75.222:8020//lsst/LSST10Y"
+echo "working on $fitsdir"
 
 #cluster: 1 machine(executor= 18cores de 2 GB=36GB)
 master="spark://134.158.75.222:7077 "
