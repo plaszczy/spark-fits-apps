@@ -92,6 +92,20 @@ import numpy as np
 #plt.plot(h.keys(),k,values())
 time_me(ana)
 
+ana="add gausian smearing"
+from pyspark.sql.functions import randn
+gal=gal.withColumn("zrec",gal.z+0.03*(1+gal.z)*randn()).cache()
+gal.show()
+minmax=gal.select(F.min("zrec"),F.max("zrec")).first()
+zmin=minmax[0]
+zmax=minmax[1]
+time_me(ana)
+
+ana="histo2"
+from hist_spark import hist_spark
+hrec=hist_spark(gal,"zrec",Nbins)
+time_me(ana)
+
 ana="tomographie"
 shell=gal.filter(gal['z'].between(0.1,0.2))
 time_me(ana)
