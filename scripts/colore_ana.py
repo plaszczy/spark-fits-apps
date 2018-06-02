@@ -68,7 +68,7 @@ Nbins=100
 dz=(zmax-zmin)/Nbins
 time_me(ana)
 
-ana="dN/Dz histogram"
+ana="histo (df)"
 #df
 #zbin=gal.select(gal.z,((gal['z']-zmin)/dz).astype('int').alias('bin')).cache()
 from pyspark.sql.types import IntegerType
@@ -80,17 +80,25 @@ zbin=gal.select(gal.z,((gal['z']-zmin)/dz).cast(IntegerType()).alias('bin')).cac
 #zbin=gal.select("z").rdd.map(lambda z: (z[0],int((z[0]-zmin)/dz))).cache()
 
 h=zbin.groupBy("bin").count().orderBy(F.asc("bin"))
-histo=h.toPandas()
-import matplotlib.pyplot as plt
-import numpy as np
-#plt.plot(x,y)
+p=h.toPandas()
 
+#import matplotlib.pyplot as plt
+#plt.plot(zmin+dz/2+p['bin']*dz,p['count'])
+#plt.bar(zmin+dz/2+p['bin']*dz,p['count'],width=dz)
+#plt.show()
+
+time_me(ana)
+
+ana="histo (rdd)"
 #via rdd
 #from operator import add
 #h=zbin.select("bin").rdd.map(lambda r:(r[0],1)).reduceByKey(add)
 #h=zbin.select("bin").rdd.map(lambda r:(r[0],1)).countByKey()
 #plt.plot(h.keys(),k,values())
+
+p=gal.select(gal.z).rdd.flatMap(list).histogram(Nbins)
 time_me(ana)
+
 
 ana="add gausian smearing"
 from pyspark.sql.functions import randn
@@ -101,7 +109,7 @@ zmin=minmax[0]
 zmax=minmax[1]
 time_me(ana)
 
-ana="histo2"
+ana="histo 2"
 from hist_spark import hist_spark
 hrec=hist_spark(gal,"zrec",Nbins)
 time_me(ana)
