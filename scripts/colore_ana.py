@@ -87,8 +87,8 @@ ana="histo (df)"
 from pyspark.sql.types import IntegerType
 zbin=gal.select(gal.z,((gal['z']-zmin)/dz).cast(IntegerType()).alias('bin'))
 h=zbin.groupBy("bin").count().orderBy(F.asc("bin"))
-p=h.select("bin",(zmin+dz/2+h['bin']*dz).alias('zbin'),"count").drop("bin").toPandas()
-p.to_csv("p.csv")
+hh=h.select("bin",(zmin+dz/2+h['bin']*dz).alias('zbin'),"count").drop("bin")
+hh.toPandas().to_csv("p.csv")
 
 
 #import matplotlib.pyplot as plt
@@ -101,11 +101,10 @@ timer.print(ana)
 #
 ana="histo rec"
 
-from hist_spark import hist_spark
-prec=hist_spark(gal,"zrec",Nbins,zmin=zmin,zmax=zmax)
+from hist_df import hist_df
+hrec=hist_df(gal,"zrec",Nbins,zmin=zmin,zmax=zmax)
 timer.print(ana)
-import pandas as pd
-prec.to_csv("prec.csv")
+hrec.toPandas().to_csv("prec.csv")
 
 import sys
 sys.exit()
