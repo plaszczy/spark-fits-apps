@@ -101,7 +101,7 @@ timer.print(ana)
 #
 ana="histo rec"
 
-from hist_df import hist_df
+from df_tools import hist_df
 hrec=hist_df(gal,"zrec",Nbins,zmin=zmin,zmax=zmax)
 timer.print(ana)
 hrec.toPandas().to_csv("prec.csv")
