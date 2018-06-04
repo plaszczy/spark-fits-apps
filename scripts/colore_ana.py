@@ -30,7 +30,7 @@ class Timer:
     def print(self,ana):
         t1=time()
         print("-"*30)
-        print(ana+"& {:2.1f} \\".format(t1-self.t0))
+        print(ana+"& {:2.1f} &".format(t1-self.t0))
         print("-"*30)
         self.t0=t1
         ana="load (HDU)+show"
@@ -75,7 +75,6 @@ ana="minmax"
 minmax=gal.select(F.min("z"),F.max("z")).first()
 zmin=minmax[0]
 zmax=minmax[1]
-#
 Nbins=100
 dz=(zmax-zmin)/Nbins
 timer.print(ana)
@@ -88,7 +87,9 @@ ana="histo (df)"
 from pyspark.sql.types import IntegerType
 zbin=gal.select(gal.z,((gal['z']-zmin)/dz).cast(IntegerType()).alias('bin'))
 h=zbin.groupBy("bin").count().orderBy(F.asc("bin"))
-p=h.toPandas()
+p=h.select("bin",(zmin+dz/2+h['bin']*dz).alias('zbin'),"count").drop("bin").toPandas()
+p.to_csv("p.csv")
+
 
 #import matplotlib.pyplot as plt
 #plt.plot(zmin+dz/2+p['bin']*dz,p['count'])
@@ -99,10 +100,15 @@ timer.print(ana)
 
 #
 ana="histo rec"
+
 from hist_spark import hist_spark
 prec=hist_spark(gal,"zrec",Nbins,zmin=zmin,zmax=zmax)
 timer.print(ana)
+import pandas as pd
+prec.to_csv("prec.csv")
 
+import sys
+sys.exit()
 
 ana="histo (UDF)"
 binNumber=F.udf(lambda z: int((z-zmin)/dz))

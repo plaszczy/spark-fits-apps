@@ -11,7 +11,5 @@ def hist_spark(df,col,Nbins,zmin=None,zmax=None):
     dz=(zmax-zmin)/Nbins
     zbin=df.select(df[col],((df[col]-zmin)/dz).cast(IntegerType()).alias('bin'))
     h=zbin.groupBy("bin").count().orderBy(F.asc("bin"))
-    p=h.toPandas()
-    # return to z values
-    p['bin']=p['bin'].apply(lambda b:zmin+dz/2+b*dz)
-    return p
+    return h.select("bin",(zmin+dz/2+h['bin']*dz).alias('zbin'),"count")\
+           .drop("bin").toPandas()
