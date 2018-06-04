@@ -1,5 +1,4 @@
 #input
-#f="hdfs://134.158.75.222:8020//lsst/LSST10Y"
 import os
 f=os.environ.get("fitsdir","/home/plaszczy/fits/galbench_srcs_s1_0.fits")
 
@@ -40,7 +39,7 @@ class Timer:
 timer=Timer()
 
 #######
-ana="load(HDU)+show(5)"
+ana="load(HDU)"
 from pyspark.sql import functions as F
 gal=spark.read.format("com.sparkfits").option("hdu",1)\
      .load(f)\
@@ -49,16 +48,11 @@ gal=spark.read.format("com.sparkfits").option("hdu",1)\
 #     .persist(StorageLevel.MEMORY_ONLY_SER)
 
 gal.printSchema()
-gal.columns
-gal.dtypes
-gal.show(5)
 timer.print(ana)
-
-
 #######
-ana="Photometric smearing"
+ana="PZ + show(5)"
 from pyspark.sql.functions import randn
-gal=gal.withColumn("zrec",gal.z+0.03*(1+gal.z)*randn())
+gal=gal.withColumn("zrec",(gal.z+0.03*(1+gal.z)*randn()).astype('float'))
 gal.show(5)
 timer.print(ana)
 
@@ -69,7 +63,7 @@ timer.print(ana)
 
 #####
 ana="statistics z"
-gal.describe(['z']).show()
+gal.describe(['z','zrec']).show()
 timer.print(ana)
 
 ana="statistics all"
@@ -86,17 +80,13 @@ Nbins=100
 dz=(zmax-zmin)/Nbins
 timer.print(ana)
 
+
+###############
 ana="histo (df)"
 #df
-#zbin=gal.select(gal.z,((gal['z']-zmin)/dz).astype('int').alias('bin')).cache()
+#zbin=gal.select(gal.z,((gal['z']-zmin)/dz).astype('int').alias('bin'))
 from pyspark.sql.types import IntegerType
-zbin=gal.select(gal.z,((gal['z']-zmin)/dz).cast(IntegerType()).alias('bin')).cache()
-#via udf
-#binNumber=F.udf(lambda z: int((z-zmin)/dz))
-#zbin=gal.select(gal.z,binNumber(gal.z).alias('bin')).cache()
-#via rdd
-#zbin=gal.select("z").rdd.map(lambda z: (z[0],int((z[0]-zmin)/dz))).cache()
-
+zbin=gal.select(gal.z,((gal['z']-zmin)/dz).cast(IntegerType()).alias('bin'))
 h=zbin.groupBy("bin").count().orderBy(F.asc("bin"))
 p=h.toPandas()
 
@@ -107,6 +97,18 @@ p=h.toPandas()
 
 timer.print(ana)
 
+#
+ana="histo rec"
+from hist_spark import hist_spark
+prec=hist_spark(gal,"zrec",Nbins,zmin=zmin,zmax=zmax)
+timer.print(ana)
+
+
+ana="histo (UDF)"
+binNumber=F.udf(lambda z: int((z-zmin)/dz))
+p_udf=gal.select(gal.z,binNumber(gal.z).alias('bin')).groupBy("bin").count().orderBy(F.asc("bin")).toPandas()
+timer.print(ana)
+
 ana="histo (rdd)"
 #via rdd
 #from operator import add
@@ -114,15 +116,10 @@ ana="histo (rdd)"
 #h=zbin.select("bin").rdd.map(lambda r:(r[0],1)).countByKey()
 #plt.plot(h.keys(),k,values())
 
-#p=gal.select(gal.z).rdd.flatMap(list).histogram(Nbins)
-#timer.print(ana)
-
-#
-ana="histo 2"
-from hist_spark import hist_spark
-hrec=hist_spark(gal,"zrec",Nbins)
+p_rdd=gal.select(gal.z).rdd.flatMap(list).histogram(Nbins)
 timer.print(ana)
 
+###############
 ana="tomographie"
 shell=gal.filter(gal['z'].between(0.1,0.2))
 timer.print(ana)
