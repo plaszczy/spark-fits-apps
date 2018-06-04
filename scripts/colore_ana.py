@@ -21,43 +21,61 @@ logger.LogManager.getLogger("org"). setLevel(level)
 logger.LogManager.getLogger("akka").setLevel(level)
 
 from time import time
-t0=time()
-def time_me(s):
-    global t0
-    t1=time()
-    print("-"*30)
-    print(ana+"& {:2.1f} \\".format(t1-t0))
-    print("-"*30)
-    t0=t1
+class Timer:
+    """
+    a simple class for printing time (s) since last call
+    """
+    def __init__(self):
+        self.t0=time()
 
-ana="load (HDU)+show"
+    def print(self,ana):
+        t1=time()
+        print("-"*30)
+        print(ana+"& {:2.1f} \\".format(t1-self.t0))
+        print("-"*30)
+        self.t0=t1
+        ana="load (HDU)+show"
+
+
+timer=Timer()
+
+#######
+ana="load(HDU)+show(5)"
 from pyspark.sql import functions as F
 gal=spark.read.format("com.sparkfits").option("hdu",1)\
      .load(f)\
-     .select(F.col("RA"), F.col("Dec"), (F.col("Z_COSMO")+F.col("DZ_RSD")).alias("z"))\
-     .persist(StorageLevel.MEMORY_ONLY_SER)
+     .select(F.col("RA"), F.col("Dec"), (F.col("Z_COSMO")+F.col("DZ_RSD")).alias("z"))
 #     .cache()
+#     .persist(StorageLevel.MEMORY_ONLY_SER)
 
 gal.printSchema()
 gal.columns
 gal.dtypes
 gal.show(5)
+timer.print(ana)
 
-time_me(ana)
 
-ana="count"
-print("N={}".format(gal.count()))
-time_me(ana)
+#######
+ana="Photometric smearing"
+from pyspark.sql.functions import randn
+gal=gal.withColumn("zrec",gal.z+0.03*(1+gal.z)*randn())
+gal.show(5)
+timer.print(ana)
 
-ana="stat z"
+####
+ana="cache (count)"
+print("N={}".format(gal.cache().count()))
+timer.print(ana)
+
+#####
+ana="statistics z"
 gal.describe(['z']).show()
-time_me(ana)
+timer.print(ana)
 
-
-ana="stats all"
+ana="statistics all"
 #get all statitics on z
 gal.describe().show()
-time_me(ana)
+timer.print(ana)
 
 ana="minmax"
 minmax=gal.select(F.min("z"),F.max("z")).first()
@@ -66,7 +84,7 @@ zmax=minmax[1]
 #
 Nbins=100
 dz=(zmax-zmin)/Nbins
-time_me(ana)
+timer.print(ana)
 
 ana="histo (df)"
 #df
@@ -87,7 +105,7 @@ p=h.toPandas()
 #plt.bar(zmin+dz/2+p['bin']*dz,p['count'],width=dz)
 #plt.show()
 
-time_me(ana)
+timer.print(ana)
 
 ana="histo (rdd)"
 #via rdd
@@ -96,24 +114,15 @@ ana="histo (rdd)"
 #h=zbin.select("bin").rdd.map(lambda r:(r[0],1)).countByKey()
 #plt.plot(h.keys(),k,values())
 
-p=gal.select(gal.z).rdd.flatMap(list).histogram(Nbins)
-time_me(ana)
+#p=gal.select(gal.z).rdd.flatMap(list).histogram(Nbins)
+#timer.print(ana)
 
-
-ana="add gausian smearing"
-from pyspark.sql.functions import randn
-gal=gal.withColumn("zrec",gal.z+0.03*(1+gal.z)*randn()).cache()
-gal.show()
-minmax=gal.select(F.min("zrec"),F.max("zrec")).first()
-zmin=minmax[0]
-zmax=minmax[1]
-time_me(ana)
-
+#
 ana="histo 2"
 from hist_spark import hist_spark
 hrec=hist_spark(gal,"zrec",Nbins)
-time_me(ana)
+timer.print(ana)
 
 ana="tomographie"
 shell=gal.filter(gal['z'].between(0.1,0.2))
-time_me(ana)
+timer.print(ana)
