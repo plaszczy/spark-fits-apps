@@ -53,6 +53,7 @@ timer.print(ana)
 ana="PZ + show(5)"
 from pyspark.sql.functions import randn
 gal=gal.withColumn("zrec",(gal.z+0.03*(1+gal.z)*randn()).astype('float'))
+#only randoms
 gal.show(5)
 timer.print(ana)
 
@@ -63,7 +64,7 @@ timer.print(ana)
 
 #####
 ana="statistics z"
-gal.describe(['z','zrec']).show()
+gal.describe(['z']).show()
 timer.print(ana)
 
 ana="statistics all"
@@ -79,32 +80,34 @@ Nbins=100
 dz=(zmax-zmin)/Nbins
 timer.print(ana)
 
-
 ###############
-ana="histo (df)"
-#df
+ana="histo (z)"
+#df on z 
 #zbin=gal.select(gal.z,((gal['z']-zmin)/dz).astype('int').alias('bin'))
 from pyspark.sql.types import IntegerType
-zbin=gal.select(gal.z,((gal['z']-zmin)/dz).cast(IntegerType()).alias('bin'))
+zbin=gal.select(gal.z,((gal['z']-zmin-dz/2)/dz).cast(IntegerType()).alias('bin'))
 h=zbin.groupBy("bin").count().orderBy(F.asc("bin"))
-hh=h.select("bin",(zmin+dz/2+h['bin']*dz).alias('zbin'),"count").drop("bin")
-hh.toPandas().to_csv("p.csv")
-
-
-#import matplotlib.pyplot as plt
-#plt.plot(zmin+dz/2+p['bin']*dz,p['count'])
-#plt.bar(zmin+dz/2+p['bin']*dz,p['count'],width=dz)
-#plt.show()
-
+p=h.select("bin",(zmin+dz/2+h['bin']*dz).alias('zbin'),"count").drop("bin").toPandas()
+p.to_csv("p.csv")
 timer.print(ana)
 
 #
-ana="histo rec"
+ana="histo p3"
+import df_tools
 
-from df_tools import hist_df
-hrec=hist_df(gal,"zrec",Nbins,zmin=zmin,zmax=zmax)
+p3=df_tools.hist_df(gal,"zrec",Nbins,bounds=minmax).toPandas()
+p3.to_csv("prec3.csv")
 timer.print(ana)
-hrec.toPandas().to_csv("prec.csv")
+
+#
+p3.to_csv("prec3.csv")
+
+ana="histo p5 (on the fly)"
+p5=df_tools.hist_df(gal.withColumn("zrec2",gal.z+0.05*randn()*(1+gal.z)),"zrec2",Nbins,bounds=minmax).toPandas()
+timer.print(ana)
+
+p5.to_csv("prec5.csv")
+
 
 import sys
 sys.exit()
