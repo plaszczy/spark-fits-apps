@@ -1,5 +1,6 @@
 import os
 f="file:"+os.path.join(os.getcwd(),"tests/test_file.fits")
+print(f)
 
 #initialisations
 from pyspark.sql import SparkSession
