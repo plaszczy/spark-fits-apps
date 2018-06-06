@@ -1,5 +1,5 @@
 import os
-f=os.environ.get("fitsdir","test_file.fits")
+f="tests/test_file.fits"
 
 #initialisations
 from pyspark.sql import SparkSession
