@@ -1,5 +1,5 @@
 import os
-f="file:"+os.path.join(os.getcwd(),"tests/test_file.fits")
+f="file://"+os.path.join(os.getcwd(),"tests/test_file.fits")
 print(f)
 
 #initialisations
