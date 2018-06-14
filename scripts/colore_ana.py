@@ -1,6 +1,6 @@
 #input
 import os
-f=os.environ.get("fitsdir","/home/plaszczy/fits/galbench_srcs_s1_0.fits")
+f=os.environ.get("fitsdir","file:///home/plaszczy/fits/galbench_srcs_s1_0.fits")
 
 #initialisations
 from pyspark.sql import SparkSession
@@ -133,3 +133,5 @@ shell=gal.filter(gal['z'].between(0.1,0.2))
 
 
 timer.print(ana)
+
+
