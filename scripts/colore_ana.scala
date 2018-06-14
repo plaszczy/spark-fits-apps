@@ -5,7 +5,7 @@ import java.io._
 val f="/home/plaszczy/fits/galbench_srcs_s1_0.fits"
 
 //time
-class Timer {
+class Timer (var t0:Double=System.nanoTime().toDouble) {
   def print(msg:String){
     val t1 = System.nanoTime().toDouble
     val dt=(t1-t0)/1e9
@@ -13,7 +13,7 @@ class Timer {
     println(msg+" > Elapsed time:" + " " + dt + "s" )
     t0=t1
   }
-  var t0:Double=System.nanoTime().toDouble
+
 }
 
 val timer=new Timer
