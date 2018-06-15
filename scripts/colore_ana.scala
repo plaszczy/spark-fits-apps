@@ -19,14 +19,13 @@ class Timer (var t0:Double=System.nanoTime().toDouble) {
 }
 
 val timer=new Timer
-var dt=Array[Double]()
-
+//var dt=Array[Double]()
 
 var ana="load(HDU)"
 val galraw=spark.read.format("com.sparkfits").option("hdu",1).load(f).select($"RA",$"Dec",($"Z_COSMO"+$"DZ_RSD").as("z"))
 
 galraw.printSchema
-dt++Array(timer.print(ana))
+//dt++Array(timer.print(ana))
 
 
 ana="PZ + show(5)"
@@ -35,6 +34,8 @@ gal.show(5)
 timer.print(ana)
 
 //cache
+//gal.repartition(10000).rdd.getNumPartitions
+
 ana="cache (count)"
 val N=gal.cache.count
 println("Ntot="+N)
