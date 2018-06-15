@@ -17,7 +17,7 @@
 export fitsdir="hdfs://134.158.75.222:8020//lsst/LSST10Y"
 echo "working on $fitsdir"
 
-#cluster: 1 machine(executor= 18cores de 2 GB=36GB)
+#cluster: 1 machine(executor= 18 cores de 2 GB=36GB)
 master="spark://134.158.75.222:7077 "
 n_executors=9
 executor_cores=17
@@ -25,12 +25,13 @@ executor_mem=30
 driver_mem=4
 
 
-total_mem=$(($driver_mem+$n_executors*executor_mem))
-ncores_tot=$(($n_executors*executor_cores))
+total_mem=$(($driver_mem+$n_executors*$executor_mem))
+ncores_tot=$(($n_executors*$executor_cores))
 
 echo "#executors=$n_executors"
 echo "#cores used=$ncores_tot"
-echo "mem used= ${total_mem}G"
+echo "mem used= ${total_mem} GB"
+echo "mem for cache $(echo $n_executors*$executor_mem*0.6|bc) GB"
 opts="--driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g "
 
 
