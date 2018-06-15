@@ -13,7 +13,6 @@ class Timer (var t0:Double=System.nanoTime().toDouble) {
     println(msg+" > Elapsed time:" + " " + dt + "s" )
     t0=t1
   }
-
 }
 
 val timer=new Timer

@@ -35,7 +35,14 @@ opts="--driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --exec
 
 
 
+nargs=$#
+if ! [ $nargs -eq 1 ] ; then
+echo "missing shell [pyspark/spark-shell]"
+exit
+fi
+shell=$1
+
 # Run it!
-cmd="pyspark $opts --jars lib/spark-fits_2.11-0.4.0.jar"
+cmd="$shell $opts --jars lib/spark-fits_2.11-0.4.0.jar"
 echo $cmd
 eval $cmd
