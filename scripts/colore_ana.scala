@@ -6,8 +6,7 @@ import scala.collection.mutable.ArrayBuffer
 
 import java.io._
 
-val f="/home/plaszczy/fits/galbench_srcs_s1_0.fits"
-//val f="hdfs://134.158.75.222:8020//lsst/LSST10Y"
+val f= scala.util.Properties.envOrElse("fitsdir", "file:///home/plaszczy/fits/galbench_srcs_s1_0.fits")
 
 //timer
 class Timer (var t0:Double=System.nanoTime().toDouble,   var dt:Double=0)  {
