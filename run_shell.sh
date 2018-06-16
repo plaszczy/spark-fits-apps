@@ -13,6 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+nargs=$#
+if ! [ $nargs -eq 1 ] ; then
+echo "missing shell [pyspark/spark-shell]"
+exit
+fi
+shell=$1
 # Parameters (put your file)
 export fitsdir="hdfs://134.158.75.222:8020//lsst/LSST10Y"
 echo "working on $fitsdir"
@@ -36,12 +42,6 @@ opts="--master $master --driver-memory ${driver_mem}g --total-executor-cores ${n
 
 
 
-nargs=$#
-if ! [ $nargs -eq 1 ] ; then
-echo "missing shell [pyspark/spark-shell]"
-exit
-fi
-shell=$1
 
 # Run it!
 cmd="$shell $opts --jars lib/spark-fits_2.11-0.4.0.jar"
