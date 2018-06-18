@@ -26,17 +26,22 @@ class Timer:
     """
     def __init__(self):
         self.t0=time()
+        self.dt=0.
+
+    def step(self):
+        t1=time()
+        self.dt=t1-self.t0
+        self.t0=t1
+        return self.dt
 
     def print(self,ana):
-        t1=time()
         print("-"*30)
-        print(ana+"& {:2.1f} &".format(t1-self.t0))
+        print(ana+"& {:2.1f} &".format(self.dt))
         print("-"*30)
-        self.t0=t1
-        ana="load (HDU)+show"
 
-
+        
 timer=Timer()
+ddt=[]
 
 #######
 ana="1: load(HDU)"
@@ -48,6 +53,7 @@ gal=spark.read.format("com.sparkfits").option("hdu",1)\
 #     .persist(StorageLevel.MEMORY_ONLY_SER)
 
 gal.printSchema()
+ddt.append(timer.step())
 timer.print(ana)
 #######
 ana="2: PZ + show(5)"
@@ -55,21 +61,25 @@ from pyspark.sql.functions import randn
 gal=gal.withColumn("zrec",(gal.z+0.03*(1+gal.z)*randn()).astype('float'))
 #only randoms
 gal.show(5)
+ddt.append(timer.step())
 timer.print(ana)
 
 ####
 ana="3: cache (count)"
 print("N={}".format(gal.cache().count()))
+ddt.append(timer.step())
 timer.print(ana)
 
 #####
 ana="4: statistics z"
 gal.describe(['z']).show()
+ddt.append(timer.step())
 timer.print(ana)
 
 ana="5: statistics all"
 #get all statitics on z
 gal.describe().show()
+ddt.append(timer.step())
 timer.print(ana)
 
 ana="6: minmax"
@@ -78,6 +88,7 @@ zmin=minmax[0]
 zmax=minmax[1]
 Nbins=100
 dz=(zmax-zmin)/Nbins
+ddt.append(timer.step())
 timer.print(ana)
 
 ###############
@@ -88,7 +99,8 @@ from pyspark.sql.types import IntegerType
 zbin=gal.select(gal.z,((gal['z']-zmin-dz/2)/dz).cast(IntegerType()).alias('bin'))
 h=zbin.groupBy("bin").count().orderBy(F.asc("bin"))
 p=h.select("bin",(zmin+dz/2+h['bin']*dz).alias('zbin'),"count").drop("bin").toPandas()
-p.to_csv("p.csv")
+#p.to_csv("p.csv")
+ddt.append(timer.step())
 timer.print(ana)
 #
 #ana="histo p3"
@@ -106,6 +118,7 @@ ana="8: histo (UDF)"
 #binNumber=F.udf(lambda z: int((z-zmin)/dz))
 binNumber=spark.udf.register("binNumber",lambda z: int((z-zmin)/dz))
 p_udf=gal.select(gal.z,binNumber(gal.z).alias('bin')).groupBy("bin").count().orderBy(F.asc("bin")).toPandas()
+ddt.append(timer.step())
 timer.print(ana)
 
 #via rdd
@@ -115,16 +128,24 @@ h=zbin.select("bin").rdd.map(lambda r:(r.bin,1)).reduceByKey(add)
 #h=zbin.select("bin").rdd.map(lambda r:(r[0],1)).countByKey()
 h.collect()
 #plt.plot(h.keys(),k,values())
+ddt.append(timer.step())
 timer.print(ana)
 
 
 ana="10: RDD histogram"
 p_rdd=gal.select(gal.z).rdd.flatMap(list).histogram(Nbins)
+ddt.append(timer.step())
 timer.print(ana)
+
+
+
+f=open("python_perf.txt","a")
+for t in ddt:
+    f.write(str(t)+"\t")
+f.write("\n")
+f.close()
 
 ###############
 #ana="tomographie"
 #shell=gal.filter(gal['z'].between(0.1,0.2))
 #timer.print(ana)
-
-
