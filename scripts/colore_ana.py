@@ -4,14 +4,14 @@ f=os.environ.get("fitsdir","file:///home/plaszczy/fits/galbench_srcs_s1_0.fits")
 
 #initialisations
 from pyspark.sql import SparkSession
-from pyspark.sql import SQLContext
 from pyspark import StorageLevel
 
 
 spark = SparkSession.builder.getOrCreate()
 sc=spark.sparkContext
 
-sqlContext = SQLContext.getOrCreate(sc)
+#from pyspark.sql import SQLContext
+#sqlContext = SQLContext.getOrCreate(sc)
 
 #logger
 logger = sc._jvm.org.apache.log4j
@@ -39,7 +39,7 @@ class Timer:
 timer=Timer()
 
 #######
-ana="load(HDU)"
+ana="1: load(HDU)"
 from pyspark.sql import functions as F
 gal=spark.read.format("com.sparkfits").option("hdu",1)\
      .load(f)\
@@ -50,7 +50,7 @@ gal=spark.read.format("com.sparkfits").option("hdu",1)\
 gal.printSchema()
 timer.print(ana)
 #######
-ana="PZ + show(5)"
+ana="2: PZ + show(5)"
 from pyspark.sql.functions import randn
 gal=gal.withColumn("zrec",(gal.z+0.03*(1+gal.z)*randn()).astype('float'))
 #only randoms
@@ -58,21 +58,21 @@ gal.show(5)
 timer.print(ana)
 
 ####
-ana="cache (count)"
+ana="3: cache (count)"
 print("N={}".format(gal.cache().count()))
 timer.print(ana)
 
 #####
-ana="statistics z"
+ana="4: statistics z"
 gal.describe(['z']).show()
 timer.print(ana)
 
-ana="statistics all"
+ana="5: statistics all"
 #get all statitics on z
 gal.describe().show()
 timer.print(ana)
 
-ana="minmax"
+ana="6: minmax"
 minmax=gal.select(F.min("z"),F.max("z")).first()
 zmin=minmax[0]
 zmax=minmax[1]
@@ -81,7 +81,7 @@ dz=(zmax-zmin)/Nbins
 timer.print(ana)
 
 ###############
-ana="histo (z)"
+ana="7: histo df"
 #df on z 
 #zbin=gal.select(gal.z,((gal['z']-zmin)/dz).astype('int').alias('bin'))
 from pyspark.sql.types import IntegerType
@@ -90,48 +90,41 @@ h=zbin.groupBy("bin").count().orderBy(F.asc("bin"))
 p=h.select("bin",(zmin+dz/2+h['bin']*dz).alias('zbin'),"count").drop("bin").toPandas()
 p.to_csv("p.csv")
 timer.print(ana)
-
 #
-ana="histo p3"
-import df_tools
+#ana="histo p3"
+#import df_tools
+#p3=df_tools.hist_df(gal,"zrec",Nbins,bounds=minmax).toPandas()
+#p3.to_csv("prec3.csv")
+#timer.print(ana)
+#p3.to_csv("prec3.csv")
+#ana="histo p5 (on the fly)"
+#p5=df_tools.hist_df(gal.withColumn("zrec2",gal.z+0.05*randn()*(1+gal.z)),"zrec2",Nbins,bounds=minmax).toPandas()
+#timer.print(ana)
+#p5.to_csv("prec5.csv")
 
-p3=df_tools.hist_df(gal,"zrec",Nbins,bounds=minmax).toPandas()
-p3.to_csv("prec3.csv")
-timer.print(ana)
-
-#
-p3.to_csv("prec3.csv")
-
-ana="histo p5 (on the fly)"
-p5=df_tools.hist_df(gal.withColumn("zrec2",gal.z+0.05*randn()*(1+gal.z)),"zrec2",Nbins,bounds=minmax).toPandas()
-timer.print(ana)
-
-p5.to_csv("prec5.csv")
-
-
-import sys
-sys.exit()
-
-ana="histo (UDF)"
-binNumber=F.udf(lambda z: int((z-zmin)/dz))
+ana="8: histo (UDF)"
+#binNumber=F.udf(lambda z: int((z-zmin)/dz))
+binNumber=spark.udf.register("binNumber",lambda z: int((z-zmin)/dz))
 p_udf=gal.select(gal.z,binNumber(gal.z).alias('bin')).groupBy("bin").count().orderBy(F.asc("bin")).toPandas()
 timer.print(ana)
 
-ana="histo (rdd)"
 #via rdd
-#from operator import add
-#h=zbin.select("bin").rdd.map(lambda r:(r[0],1)).reduceByKey(add)
+ana="9: histo (rdd) reducebykey"
+from operator import add
+h=zbin.select("bin").rdd.map(lambda r:(r.bin,1)).reduceByKey(add)
 #h=zbin.select("bin").rdd.map(lambda r:(r[0],1)).countByKey()
+h.collect()
 #plt.plot(h.keys(),k,values())
+timer.print(ana)
 
+
+ana="10: RDD histogram"
 p_rdd=gal.select(gal.z).rdd.flatMap(list).histogram(Nbins)
 timer.print(ana)
 
 ###############
-ana="tomographie"
-shell=gal.filter(gal['z'].between(0.1,0.2))
-
-
-timer.print(ana)
+#ana="tomographie"
+#shell=gal.filter(gal['z'].between(0.1,0.2))
+#timer.print(ana)
 
 
