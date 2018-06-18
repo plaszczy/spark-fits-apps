@@ -124,7 +124,7 @@ timer.print(ana)
 #via rdd
 ana="9: histo (rdd) reducebykey"
 from operator import add
-h=zbin.select("bin").rdd.map(lambda r:(r.bin,1)).reduceByKey(add)
+h=zbin.select("bin").rdd.map(lambda r:(r.bin,1)).reduceByKey(add).sortByKey().map(lambda x: (zmin+dz/2 +x[0]*dz,x[1]))
 #h=zbin.select("bin").rdd.map(lambda r:(r[0],1)).countByKey()
 h.collect()
 #plt.plot(h.keys(),k,values())
@@ -136,8 +136,6 @@ ana="10: RDD histogram"
 p_rdd=gal.select(gal.z).rdd.flatMap(list).histogram(Nbins)
 ddt.append(timer.step())
 timer.print(ana)
-
-
 
 f=open("python_perf.txt","a")
 for t in ddt:
