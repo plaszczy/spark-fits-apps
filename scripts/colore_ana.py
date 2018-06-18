@@ -10,9 +10,6 @@ from pyspark import StorageLevel
 spark = SparkSession.builder.getOrCreate()
 sc=spark.sparkContext
 
-#from pyspark.sql import SQLContext
-#sqlContext = SQLContext.getOrCreate(sc)
-
 #logger
 logger = sc._jvm.org.apache.log4j
 level = getattr(logger.Level, "WARN")
@@ -116,7 +113,10 @@ timer.print(ana)
 
 ana="8: histo (UDF)"
 #binNumber=F.udf(lambda z: int((z-zmin)/dz))
-binNumber=spark.udf.register("binNumber",lambda z: int((z-zmin)/dz))
+
+from pyspark.sql import SQLContext
+sqlContext = SQLContext.getOrCreate(sc)
+binNumber=sqlContext.udf.register("binNumber",lambda z: int((z-zmin)/dz))
 p_udf=gal.select(gal.z,binNumber(gal.z).alias('bin')).groupBy("bin").count().orderBy(F.asc("bin")).toPandas()
 ddt.append(timer.step())
 timer.print(ana)
