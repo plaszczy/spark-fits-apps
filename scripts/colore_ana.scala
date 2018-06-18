@@ -2,10 +2,8 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 
 import org.apache.spark.sql.SQLContext
-import org.apache.spark.sql.hive.HiveContext
-import scala.collection.mutable.ArrayBuffer
 
-import java.io._
+import scala.collection.mutable.ArrayBuffer
 
 val f= scala.util.Properties.envOrElse("fitsdir", "file:///home/plaszczy/fits/galbench_srcs_s1_0.fits")
 
@@ -46,7 +44,6 @@ timer.print(ana)
 
 ana="3: cache (count)"
 val N=gal.cache.count
-println("Ntot="+N)
 ddt+=timer.step
 timer.print(ana)
 
@@ -63,8 +60,8 @@ timer.print(ana)
 
 ana="6: minmax"
 val minmax=gal.select(min("z"),max("z")).first()
-val zmin=minmax(0).toString.toDouble
-val zmax=minmax(1).toString.toDouble
+val zmin=minmax.getFloat(0)
+val zmax=minmax.getFloat(1)
 val Nbins=100
 val dz=(zmax-zmin)/Nbins
 ddt+=timer.step
@@ -80,7 +77,8 @@ timer.print(ana)
 
 ana="8a: histo UDF"
 val sqlContext = SQLContext.getOrCreate(sc)
-val binNumber=sqlContext.udf.register("binNumber",(z:Float)=>((z-zmin)/dz).toInt)
+//val binNumber=sqlContext.udf.register("binNumber",(z:Float)=>((z-zmin)/dz).toInt)
+val binNumber=spark.udf.register("binNumber",(z:Float)=>((z-zmin)/dz).toInt)
 val zbin=gal.select($"z",(binNumber(gal("z"))).as("bin"))
 val h=zbin.groupBy("bin").count.sort("bin")
 val p=h.select($"bin",(lit(zmin+dz/2)+h("bin")*lit(dz)).as("zbin"),$"count").drop("bin")
@@ -90,15 +88,14 @@ ddt+=timer.step
 timer.print(ana)
 
 //histoRDD
-//ana="histo RDD countbykey"
-//val h=zbin.select("bin").rdd.map(r=>(r(0),1)).countByKey()
-// manque le sort dans scala car Map[T, Long]
-
-//completer
 ana="9: histo RDD reducebykey"
 val zbin=gal.select($"z",(((gal("z")-lit(zmin+dz/2)))/dz).cast(IntegerType).as("bin"))
-val h=zbin.select("bin").rdd.map(r=>(r(0),1)).reduceByKey(_+_).sortBy(c => c._2, true)
-//.map(x=>(zmin+dz/2+x._1*dz,x._2)
+val h=zbin.select("bin").rdd.map(row =>(row.getInt(0),1)).reduceByKey(_+_).sortByKey().map(x=>(zmin+dz/2 +x._1*dz,x._2))
+// c'est des RDD(Int,Int)
+// ou:
+//val h=zbin.select("bin").rdd.map(row =>(row.getInt(0),1)).countbykey
+// attention retounre une scala.collection.Map
+// accessible par h.keys, h.values
 h.collect
 
 ddt+=timer.step
@@ -114,7 +111,8 @@ timer.print(ana)
 //p.write.json("histo.json")
 //p.rdd.repartition(1).saveAsTextFile("histo.txt")
 
-//java
+//java write
+import java.io._
 val file = "scala_perf.txt"
 val append=true
 val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file,append))) 
