@@ -128,18 +128,19 @@ ddt.append(timer.step())
 timer.print(ana)
 
 #via rdd
-ana="9: histo (rdd) reducebykey"
-from operator import add
-h=zbin.select("bin").rdd.map(lambda r:(r.bin,1)).reduceByKey(add).sortByKey().map(lambda x: (zmin+dz/2 +x[0]*dz,x[1]))
+#ana="9: histo (rdd) reducebykey"
+#from operator import add
+#h=zbin.select("bin").rdd.map(lambda r:(r.bin,1)).reduceByKey(add).sortByKey().map(lambda x: (zmin+dz/2 +x[0]*dz,x[1]))
 #h=zbin.select("bin").rdd.map(lambda r:(r[0],1)).countByKey()
-h.collect()
+#h.collect()
 #plt.plot(h.keys(),k,values())
-ddt.append(timer.step())
-timer.print(ana)
+#ddt.append(timer.step())
+#timer.print(ana)
 
 
 ana="10: RDD histogram"
-p_rdd=gal.select(gal.z).rdd.flatMap(list).histogram(Nbins)
+#p_rdd=gal.select(gal.z).rdd.flatMap(list).histogram(Nbins)
+p_rdd=gal.select(gal.z).rdd.map(lambda r: r.z).histogram(Nbins)
 ddt.append(timer.step())
 timer.print(ana)
 
