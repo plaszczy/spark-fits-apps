@@ -92,7 +92,7 @@ timer.print(ana)
 ana="7: histo df"
 #df on z 
 #zbin=gal.select(gal.z,((gal['z']-zmin)/dz).astype('int').alias('bin'))
-from pyspark.sql.types import IntegerType
+from pyspark.sql.types import IntegerType,FloatType
 zbin=gal.select(gal.z,((gal['z']-zmin-dz/2)/dz).cast(IntegerType()).alias('bin'))
 h=zbin.groupBy("bin").count().orderBy(F.asc("bin"))
 p=h.select("bin",(zmin+dz/2+h['bin']*dz).alias('zbin'),"count").drop("bin").toPandas()
@@ -120,8 +120,10 @@ ana="8: histo (UDF)"
 def binNumber(z):
     return int((z-zmin)/dz)
 #turn to udf
-#binNumber_udf=F.udf(lambda x: binNumber(x))
-binNumber_udf=spark.udf.register("binNumber",binNumber,IntegerType())
+binNumber_udf=F.udf(lambda x: binNumber(x))
+
+#NOK on previous versions
+#binNumber_udf=spark.udf.register("binNumber",binNumber,IntegerType())
 
 p_udf=gal.select(gal.z,binNumber_udf(gal.z).alias('bin')).groupBy("bin").count().orderBy(F.asc("bin")).toPandas()
 ddt.append(timer.step())
