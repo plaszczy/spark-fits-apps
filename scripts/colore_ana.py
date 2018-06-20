@@ -112,15 +112,15 @@ timer.print(ana)
 #p5.to_csv("prec5.csv")
 
 ana="8: histo (UDF)"
-#binNumber=F.udf(lambda z: int((z-zmin)/dz))
+binNumber_udf=F.udf(lambda z: int((z-zmin)/dz))
 #from pyspark.sql import SQLContext
 #sqlContext = SQLContext.getOrCreate(sc)
 #binNumber=sqlContext.udf.register("binNumber",lambda z: int((z-zmin)/dz))
 #std python func
-def binNumber(z):
-    return int((z-zmin)/dz)
+#def binNumber(z):
+#    return int((z-zmin)/dz)
 #turn to udf
-binNumber_udf=F.udf(lambda x: binNumber(x))
+#binNumber_udf=F.udf(lambda x: binNumber(x))
 
 #NOK on previous versions
 #binNumber_udf=spark.udf.register("binNumber",binNumber,IntegerType())
