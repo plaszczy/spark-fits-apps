@@ -111,7 +111,20 @@ timer.print(ana)
 #timer.print(ana)
 #p5.to_csv("prec5.csv")
 
-ana="8: histo (UDF)"
+
+ana="8b: histo (pandas UDF)"
+from pyspark.sql.functions import pandas_udf, PandasUDFType
+import pandas as pd
+@pandas_udf("float", PandasUDFType.SCALAR)
+def binFloat(z):
+    return pd.Series((z-zmin)/dz)
+#dont know how to cast in pd so do it later
+p_udf=gal.select(gal.z,binFloat("z").astype('int').alias('bin')).groupBy("bin").count().orderBy(F.asc("bin")).toPandas()
+ddt.append(timer.step())
+timer.print(ana)
+
+
+ana="8a: histo (UDF)"
 binNumber_udf=F.udf(lambda z: int((z-zmin)/dz))
 #from pyspark.sql import SQLContext
 #sqlContext = SQLContext.getOrCreate(sc)
@@ -124,7 +137,6 @@ binNumber_udf=F.udf(lambda z: int((z-zmin)/dz))
 
 #NOK on previous versions
 #binNumber_udf=spark.udf.register("binNumber",binNumber,IntegerType())
-
 p_udf=gal.select(gal.z,binNumber_udf(gal.z).alias('bin')).groupBy("bin").count().orderBy(F.asc("bin")).toPandas()
 ddt.append(timer.step())
 timer.print(ana)
