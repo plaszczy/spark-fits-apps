@@ -1,3 +1,7 @@
+
+doRDD=False
+write=False
+
 #input
 import os
 f=os.environ.get("fitsdir","file:///home/plaszczy/fits/galbench_srcs_s1_0.fits")
@@ -151,20 +155,42 @@ timer.print(ana)
 #ddt.append(timer.step())
 #timer.print(ana)
 
+if doRDD:
+    ana="10: RDD histogram"
+    #p_rdd=gal.select(gal.z).rdd.flatMap(list).histogram(Nbins)
+    p_rdd=gal.select(gal.z).rdd.map(lambda r: r.z).histogram(Nbins)
+    ddt.append(timer.step())
+    timer.print(ana)
 
-ana="10: RDD histogram"
-#p_rdd=gal.select(gal.z).rdd.flatMap(list).histogram(Nbins)
-p_rdd=gal.select(gal.z).rdd.map(lambda r: r.z).histogram(Nbins)
+ana="11:tomographie"
+shell=gal.filter(gal['zrec'].between(0.1,0.2))
+
+#export PYSPARK_PYTHON=/home/plaszczy/lib/anaconda3/bin/python
+import pandas as pd
+import numpy as np
+import healpy as hp
+nside=512
+
+from pyspark.sql.functions import pandas_udf, PandasUDFType
+
+@pandas_udf('int', PandasUDFType.SCALAR)
+def Ang2Pix(ra,dec):
+    return pd.Series(hp.ang2pix(nside,np.radians(90-dec),np.radians(ra)))
+
+map=shell.select(Ang2Pix("RA","Dec").alias("ipix")).groupBy("ipix").count().toPandas()
+
+#back in python world
+myMap = np.zeros(12 * nside**2)
+myMap[map['ipix'].values]=map['count'].values
+
 ddt.append(timer.step())
 timer.print(ana)
 
-f=open("python_perf.txt","a")
-for t in ddt:
-    f.write(str(t)+"\t")
-f.write("\n")
-f.close()
+if write:
+    f=open("python_perf.txt","a")
+    for t in ddt:
+        f.write(str(t)+"\t")
+        f.write("\n")
+    f.close()
 
 ###############
-#ana="tomographie"
-#shell=gal.filter(gal['z'].between(0.1,0.2))
-#timer.print(ana)

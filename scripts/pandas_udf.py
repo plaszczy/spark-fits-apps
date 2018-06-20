@@ -8,7 +8,7 @@ sqlContext = SQLContext.getOrCreate(sc)
 #start
 df = sqlContext.range(0, 1000)
 
-@udf('int')
+@udf('float')
 def plus_one(v):
       return v + 1
 
