@@ -31,7 +31,10 @@ class Timer:
         print("-"*30)
 
 
-def benchmark(ff,timer,ddt):
+def benchmark(ff):
+    Timer=new Timer()
+    ddt=[]
+    
     ana="1: load(HDU)"
     gal=spark.read.format("com.sparkfits").option("hdu",1)\
          .load(ff)\
@@ -138,11 +141,11 @@ def benchmark(ff,timer,ddt):
     #ddt.append(timer.step())
     #timer.print(ana)
 
-    ana="10: RDD histogram"
-    #p_rdd=gal.select(gal.z).rdd.flatMap(list).histogram(Nbins)
-    p_rdd=gal.select(gal.z).rdd.map(lambda r: r.z).histogram(Nbins)
-    ddt.append(timer.step())
-    timer.print(ana)
+##    ana="10: RDD histogram"
+##    #p_rdd=gal.select(gal.z).rdd.flatMap(list).histogram(Nbins)
+##    p_rdd=gal.select(gal.z).rdd.map(lambda r: r.z).histogram(Nbins)
+##    ddt.append(timer.step())
+##    timer.print(ana)
 
    ## ana="11:tomographie"
 ##    shell=gal.filter(gal['zrec'].between(0.1,0.2))
@@ -153,18 +156,15 @@ def benchmark(ff,timer,ddt):
 ##    map=shell.select(Ang2Pix("RA","Dec").alias("ipix")).groupBy("ipix").count().toPandas()
 
     #back to python world
-    myMap = np.zeros(12 * nside**2)
-    myMap[map['ipix'].values]=map['count'].values
+    #myMap = np.zeros(12 * nside**2)
+    #myMap[map['ipix'].values]=map['count'].values
 
-    ddt.append(timer.step())
-    timer.print(ana)
+    #ddt.append(timer.step())
+    #timer.print(ana)
 
-    #append
-    f=open("python_perf.txt","a")
-    for t in ddt:
-        f.write(str(t)+"\t")
-        f.write("\n")
-    f.close()
+    return ddt
+
+
 ###############
 
 
@@ -181,8 +181,11 @@ level = getattr(logger.Level, "WARN")
 logger.LogManager.getLogger("org"). setLevel(level)
 logger.LogManager.getLogger("akka").setLevel(level)
 
-timer=Timer()
-ddt=[]
-
 for meas in range(10):
-    benchmark(f,timer,ddt)
+    ddt=benchmark(f,timer,ddt)
+    #append to file
+    f=open("python_perf.txt","a")
+    for t in ddt:
+        f.write(str(t)+"\t")
+        f.write("\n")
+    f.close()
