@@ -8,17 +8,17 @@ sqlContext = SQLContext.getOrCreate(sc)
 #start
 df = sqlContext.range(0, 1000)
 
-@udf('float')
+@udf('int')
 def plus_one(v):
       return v + 1
 
-df.withColumn('v2', plus_one(df.id)).show()
+df.withColumn('udf', plus_one(df.id)).show()
 
-@pandas_udf('float',PandasUDFType.SCALAR)
+@pandas_udf('int',PandasUDFType.SCALAR)
 def pandas_plus_one(v):
     return v + 1
 
-df.withColumn('v3', pandas_plus_one(df.id)).show()
+df.withColumn('pandas_udf', pandas_plus_one(df.id)).show()
 
 import pandas as pd
 from scipy import stats
