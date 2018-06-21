@@ -32,7 +32,7 @@ class Timer:
 
 
 def benchmark(ff):
-    Timer=new Timer()
+    timer=Timer()
     ddt=[]
     
     ana="1: load(HDU)"
@@ -182,7 +182,7 @@ logger.LogManager.getLogger("org"). setLevel(level)
 logger.LogManager.getLogger("akka").setLevel(level)
 
 for meas in range(10):
-    ddt=benchmark(f,timer,ddt)
+    ddt=benchmark(f)
     #append to file
     f=open("python_perf.txt","a")
     for t in ddt:
