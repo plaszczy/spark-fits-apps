@@ -181,7 +181,7 @@ level = getattr(logger.Level, "WARN")
 logger.LogManager.getLogger("org"). setLevel(level)
 logger.LogManager.getLogger("akka").setLevel(level)
 
-for meas in range(10):
-    ddt=np.array(benchmark(input))
-    with open("python_perf.txt", 'ab') as abc:
-        np.savetxt(abc, ddt.reshape(1,ddt.shape[0]))
+#single run
+ddt=np.array(benchmark(input))
+with open("python_perf.txt", 'ab') as abc:
+    np.savetxt(abc, ddt.reshape(1,ddt.shape[0]))
