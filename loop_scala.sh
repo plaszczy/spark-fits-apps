@@ -21,8 +21,8 @@ echo "mem used= ${total_mem} GB"
 echo "mem for cache $(echo $n_executors*$executor_mem*0.6|bc) GB"
 opts="$local --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g "
 
-
+rm scala_perf.txt
+touch scala_perf.txt
 for i in {1..10}; do 
 spark-shell $opts --jars lib/spark-fits_2.11-0.4.0.jar < scripts/colore_ana.scala
-#spark-submit $opt  --jars lib/spark-fits_2.11-0.4.0.jar scripts/colore_ana.py
 done
