@@ -23,6 +23,9 @@ opts="$local --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot}
 
 rm scala_perf.txt
 touch scala_perf.txt
-for i in {1..10}; do 
-spark-shell $opts --jars lib/spark-fits_2.11-0.4.0.jar < scripts/colore_ana.scala
+for i in {1..$1}; do 
+#cmd="spark-shell $opts --jars lib/spark-fits_2.11-0.4.0.jar < scripts/colore_ana.scala"
+cmd="spark-submit $opts --jars lib/spark-fits_2.11-0.4.0.jar scripts/colore_ana.py"
+echo $cmd
+eval $cmd
 done
