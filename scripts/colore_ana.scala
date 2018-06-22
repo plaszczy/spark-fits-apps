@@ -83,28 +83,31 @@ val zbin=gal.select($"z",(binNumber(gal("z"))).as("bin"))
 val h=zbin.groupBy("bin").count.sort("bin")
 val p=h.select($"bin",(lit(zmin+dz/2)+h("bin")*lit(dz)).as("zbin"),$"count").drop("bin")
 val c=p.collect
-
 ddt+=timer.step
 timer.print(ana)
 
+
+ana="8b: pandas UDF"
+ddt+=0
+
+
 //histoRDD
-ana="9: histo RDD reducebykey"
-val zbin=gal.select($"z",(((gal("z")-lit(zmin+dz/2)))/dz).cast(IntegerType).as("bin"))
-val h=zbin.select("bin").rdd.map(row =>(row.getInt(0),1)).reduceByKey(_+_).sortByKey().map(x=>(zmin+dz/2 +x._1*dz,x._2))
+//ana="9: histo RDD reducebykey"
+//val zbin=gal.select($"z",(((gal("z")-lit(zmin+dz/2)))/dz).cast(IntegerType).as("bin"))
+//val h=zbin.select("bin").rdd.map(row =>(row.getInt(0),1)).reduceByKey(_+_).sortByKey().map(x=>(zmin+dz/2 +x._1*dz,x._2))
 // c'est des RDD(Int,Int)
 // ou:
 //val h=zbin.select("bin").rdd.map(row =>(row.getInt(0),1)).countbykey
 // attention retounre une scala.collection.Map
 // accessible par h.keys, h.values
-h.collect
+//h.collect
+//ddt+=timer.step
+//timer.print(ana)
 
-ddt+=timer.step
-timer.print(ana)
-
-ana="10: RDD histogram"
-val h=gal.select("z").rdd.map(row=> row.getFloat(0)).histogram(100)
-ddt+=timer.step
-timer.print(ana)
+//ana="10: RDD histogram"
+//val h=gal.select("z").rdd.map(row=> row.getFloat(0)).histogram(100)
+//ddt+=timer.step
+//timer.print(ana)
 
 //save to csv
 //p.repartition(1).write.csv("histo.csv")
