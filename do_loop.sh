@@ -22,10 +22,11 @@ echo "mem for cache $(echo $n_executors*$executor_mem*0.6|bc) GB"
 opts="$local --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g "
 
 rm scala_perf.txt
+rm python_perf.txt
 touch scala_perf.txt
-for i in {1..10}; do 
+for i in {1..100}; do 
 #cmd="spark-shell $opts --jars lib/spark-fits_2.11-0.4.0.jar < scripts/colore_ana.scala"
+#eval $cmd
 cmd="spark-submit $opts --jars lib/spark-fits_2.11-0.4.0.jar scripts/colore_ana.py"
-echo $cmd
 eval $cmd
 done
