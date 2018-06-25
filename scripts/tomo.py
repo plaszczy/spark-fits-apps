@@ -33,7 +33,8 @@ class Timer:
 
 def benchmark(gal,z1,z2):
     
-    shell=gal.filter(gal['zrec'].between(0.1,0.2))
+    shell=gal.filter(gal['zrec'].between(z1,z2))
+    print("N in shell={}".format(shell.count()))
     nside=512
     @pandas_udf('int', PandasUDFType.SCALAR)
     def Ang2Pix(ra,dec):
@@ -67,9 +68,13 @@ gal=spark.read.format("com.sparkfits").option("hdu",1)\
      .load(ff)\
      .select(F.col("RA"), F.col("Dec"), (F.col("Z_COSMO")+F.col("DZ_RSD")).alias("z"))
 gal.printSchema()
+timer.step()
+timer.print("load")
 #######
 gal=gal.withColumn("zrec",(gal.z+0.03*(1+gal.z)*randn()).astype('float'))
 gal.show(5)
+timer.step()
+timer.print("show")
 ####
 print("N={}".format(gal.cache().count()))
 timer.step()
@@ -80,14 +85,14 @@ zshell=[0.0,0.1276595744680851,0.27161611588954276,0.433950088130761,0.617007546
 #zshell=[0.1,0.2,0.3,0.4,0.5]
 
 #writemap
-write=True
+write=False
 dt=[]
 for i in range(len(zshell)-1):
     z1=zshell[i]
     z2=zshell[i+1]
-    print("shell=[{},{}]".format(z1,z2))
     map=benchmark(gal,z1,z2)
     dt.append(timer.step())
+    timer.print("shell=[{},{}]".format(z1,z2))
     if write:
         hp.write_map("map{}.fits".format(i), map)
 ddt=np.array(dt)

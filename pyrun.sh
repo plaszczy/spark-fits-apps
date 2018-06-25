@@ -1,5 +1,12 @@
 #!/bin/bash
 
+
+nargs=$#
+if [ $nargs -ne 2 ] ; then
+echo "usage pyrun.sh script.py nloop"
+exit 1
+fi
+
 # Parameters (put your file)
 export fitsdir="hdfs://134.158.75.222:8020//lsst/LSST10Y"
 echo "working on $fitsdir"
@@ -19,15 +26,13 @@ echo "#executors=$n_executors"
 echo "#cores used=$ncores_tot"
 echo "mem used= ${total_mem} GB"
 echo "mem for cache $(echo $n_executors*$executor_mem*0.6|bc) GB"
-opts="$local --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g "
+export opts="$local --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g  --jars lib/spark-fits_2.11-0.4.0.jar"
 
-rm scala_perf.txt
-rm python_perf.txt
-touch scala_perf.txt
-for i in {1..10}; do 
-#cmd="spark-shell $opts --jars lib/spark-fits_2.11-0.4.0.jar < scripts/colore_ana.scala"
-#eval $cmd
-#cmd="spark-submit $opts --jars lib/spark-fits_2.11-0.4.0.jar scripts/colore_ana.py"
-cmd="spark-submit $opts --jars lib/spark-fits_2.11-0.4.0.jar scripts/tomo.py"
+nloop=$2
+echo "running $nloop times"
+
+for (( i=1 ; i<=$nloop; i++ )); do 
+cmd="spark-submit $opts $1"
+echo $cmd
 eval $cmd
 done
