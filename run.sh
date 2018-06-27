@@ -29,7 +29,7 @@ SF=lib/spark-fits_2.11-0.4.0.jar
 HP=lib/jhealpix.jar
 
 # Parameters (put your file)
-fitsfn="file:/home/plaszczy/fits/galbench_srcs_s1_0.fits"
+fitsfn="file:///home/plaszczy/fits/galbench_srcs_s1_0.fits"
 nside=512
 replication=0
 loop=1
