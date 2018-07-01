@@ -191,24 +191,30 @@ object HealpixProjection {
     import jc.session.implicits._
 
     // Redshift boundaries
-    val redList = List(0.1, 0.2, 0.3, 0.4, 0.5)
+    val redList = List(0.0,0.1276595744680851,0.27161611588954276,0.433950088130761,0.6170075461900071,0.8234340414483059,1.0562128552502175,1.3187081133672667,1.6147134044354285,1.9485066050016535,2.324911703512503)
 
     // Make shells
     val shells = redList.slice(0, redList.size-1).zip(redList.slice(1, redList.size))
 
-    val df_indexed = jc.df_index
-                       .map(x => (jc.grid.index(dec2theta(x.dec), ra2phi(x.ra)), x.z, 1))
-                       .persist(StorageLevel.MEMORY_ONLY_SER)
+    println("putting in cache")
+    time("Nsamples=",jc.df_index.cache().count)
+
+    //val df_indexed = jc.df_index
+     //                 .map(x => (jc.grid.index(dec2theta(x.dec), ra2phi(x.ra)), x.z, 1))
+     //.persist(StorageLevel.MEMORY_ONLY_SER)
 
     for (l <- 1 to loop) {
       // Loop over shells, make an histogram, and save results.
       for (pos <- shells) {
         val start = pos._1
         val stop = pos._2
-        val result = df_indexed.filter(x => x._2 >= start && x._2 < stop) // filter in redshift space
-          .groupBy("_1").agg(sum($"_3")) // group by pixel index and make an histogram
-          .count()
-        print(s"result=$result \n")
+        val map = time("shell proj:"+pos,
+          jc.df_index.filter(col("z").between(start,stop))
+            .map(x=> jc.grid.index(dec2theta(x.dec), ra2phi(x.ra)))
+            .groupBy("value")
+            .count()
+            .collect()
+        )
       }
     }
   }
@@ -354,7 +360,7 @@ object HealpixProjection {
 
     // Benchmark paper
     //val result = time("benchmark", ioBenchmark(jc, loop))
-    val result = redshiftShell(jc, loop)
+    val result = time("tomo",redshiftShell(jc, loop))
     // val result = neighbours(jc, loop)
     // val result = intersection(jc.session, catalogFilename, replication, nside, loop)
   }
