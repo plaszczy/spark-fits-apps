@@ -44,6 +44,6 @@ opts=" $local --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot
 
 
 # Run it!
-cmd="$* $opts --jars lib/spark-fits_2.11-0.4.0.jar"
+cmd="$* $opts --jars lib/spark-fits_2.11-0.6.0.jar"
 echo $cmd
 eval $cmd

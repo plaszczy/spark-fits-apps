@@ -26,7 +26,6 @@ class Timer:
         return self.dt
 
     def print(self,ana):
-        print("-"*30)
         print(ana+"& {:2.1f} &".format(self.dt))
         print("-"*30)
 

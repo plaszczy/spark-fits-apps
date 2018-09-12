@@ -26,7 +26,7 @@ val timer=new Timer
 var ddt=ArrayBuffer[Double]()
 
 var ana="1: load(HDU)"
-val galraw=spark.read.format("com.sparkfits").option("hdu",1).load(f).select($"RA",$"Dec",($"Z_COSMO"+$"DZ_RSD").as("z"))
+val galraw=spark.read.format("fits").option("hdu",1).load(f).select($"RA",$"Dec",($"Z_COSMO"+$"DZ_RSD").as("z"))
 
 galraw.printSchema
 ddt+=timer.step
