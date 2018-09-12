@@ -36,7 +36,7 @@ def benchmark(ff):
     ddt=[]
     
     ana="1: load(HDU)"
-    gal=spark.read.format("com.sparkfits").option("hdu",1)\
+    gal=spark.read.format("fits").option("hdu",1)\
          .load(ff)\
          .select(F.col("RA"), F.col("Dec"), (F.col("Z_COSMO")+F.col("DZ_RSD")).alias("z"))
     #     .cache()
