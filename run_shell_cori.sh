@@ -20,10 +20,10 @@ exit
 fi
 
 # Parameters (put your file)
-export fitsdir="fitsfn="/global/cscratch1/sd/plaszczy/LSST10Y"
+export fitsdir="/global/cscratch1/sd/plaszczy/LSST10Y"
 
 # External JARS
-SF=lib/spark-fits_2.11-0.6.0.jar
+SF="lib/spark-fits_2.11-0.6.0.jar"
 
 echo "working on $fitsdir"
 
@@ -42,10 +42,11 @@ echo "#executors=$n_executors"
 echo "#cores used=$ncores_tot"
 echo "mem used= ${total_mem} GB"
 echo "mem for cache $(echo $n_executors*$executor_mem*0.6|bc) GB"
+
 opts=" $local --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g "
 
 
 # Run it!
-cmd="$* $opts --jars $SF"
+cmd="shifter $* $opts --jars $SF"
 echo $cmd
 eval $cmd
