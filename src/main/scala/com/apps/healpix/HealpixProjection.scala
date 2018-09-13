@@ -76,7 +76,7 @@ object HealpixProjection {
       df
     } else {
       val df2 = session.read
-        .format("com.sparkfits")
+        .format("fits")
         .option("hdu", 1)
         .option("columns", "RA,DEC,Z_COSMO")
         .load(catalogFilename)
@@ -124,7 +124,7 @@ object HealpixProjection {
 
     // Data
     val df = session.read
-      .format("com.sparkfits")
+      .format("fits")
       .option("hdu", 1)
       .option("columns", "RA,DEC,Z_COSMO")
       .load(catalogFilename)
@@ -156,7 +156,7 @@ object HealpixProjection {
 
     // Data
     val df1 = session.read
-      .format("com.sparkfits")
+      .format("fits")
       .option("hdu", 1)
       .option("columns", "RA,DEC")
       .load(cat1)
@@ -169,7 +169,7 @@ object HealpixProjection {
     // Take a sample of the first one (ideally would be another one!)
     // val tmp = df1_tot.sample(false, 0.0001).toDF
     val tmp = session.read
-      .format("com.sparkfits")
+      .format("fits")
       .option("hdu", 1)
       .option("columns", "RA,DEC")
       .load("hdfs://134.158.75.222:8020//lsst/LSST10Y/out_srcs_s1_0.fits")
