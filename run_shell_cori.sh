@@ -29,7 +29,7 @@ echo "working on $fitsdir"
 
 #cluster: 1 machine(executor= 32 cores de 2 GB=64B)
 local="--master $SPARKURL"
-n_executors=5
+n_executors=$(($NODES-1))
 executor_cores=32
 executor_mem=50
 driver_mem=10
