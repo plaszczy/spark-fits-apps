@@ -28,6 +28,12 @@ SF="lib/spark-fits_2.11-0.6.0.jar"
 echo "working on $fitsdir"
 
 #cluster: 1 machine(executor= 32 cores de 2 GB=64B)
+
+if [ -z "$NODES" ] ; then
+echo "specify NODES"
+return
+fi
+
 local="--master $SPARKURL"
 n_executors=$(($NODES-1))
 executor_cores=32
@@ -47,6 +53,6 @@ opts=" $local --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot
 
 
 # Run it!
-cmd="shifter $* $opts --jars $SF"
+cmd="$* $opts --jars $SF"
 echo $cmd
 eval $cmd
