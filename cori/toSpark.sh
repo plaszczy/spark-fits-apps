@@ -2,7 +2,7 @@
 
 nargs=$#
 if ! [ $nargs -eq 2 ]; then
-echo "usage: topsark N(odes) t(min)"
+echo "usage: toSpark N(#nodes) t(mins)"
 return
 fi
 declare -i NODES
@@ -26,5 +26,10 @@ export NODES
 IMG=registry.services.nersc.gov/plaszczy/spark_desc:latest
 
 echo "IMG=$IMG"
+
+if ! [ -d /global/cscratch1/sd/$USER ] then 
+echo "creating NodeCache in /global/cscratch1/sd/$USER" 
+mkdir /global/cscratch1/sd/$USER
+fi
 
 salloc -N $NODES -t $t -C haswell -q $queue --image=$IMG --volume="/global/cscratch1/sd/$USER/tmpfiles:/tmp:perNodeCache=size=200G"

@@ -7,22 +7,31 @@ start-all.sh
 export PYSPARK_DRIVER_PYTHON=ipython
 
 export fitsdir="/global/cscratch1/sd/plaszczy/LSST10Y"
-SF=lib/spark-fits_2.11-0.6.0.jar
+
+#SparkFITS version
+SF=/global/homes/p/plaszczy/Spark/spark-fits-apps/lib/spark-fits_2.11-0.6.0.jar
 
 echo "fitsdir=$fitsdir"
 echo "SF=$SF"
 
 
 if [ -z "$NODES" ] ; then
-echo "specify NODES"
+echo "number of NODES cannot be found: did you use toSpark to log-in?"
 return
 fi
 
 master="--master $SPARKURL"
 n_executors=$(($NODES-1))
-executor_cores=32
-executor_mem=50
-driver_mem=10
+
+#config UPSUD (5 NODES)
+executor_cores=27
+executor_mem=48
+driver_mem=4
+
+#config NERSC
+#executor_cores=32
+#executor_mem=50
+#driver_mem=10
 
 
 total_mem=$(($driver_mem+$n_executors*$executor_mem))
