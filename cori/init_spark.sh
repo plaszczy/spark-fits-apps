@@ -48,7 +48,7 @@ export SPARKOPTS="$master --driver-memory ${driver_mem}g --total-executor-cores 
 printenv SPARKOPTS
 
 
-#shifter is implicit
+#aliases for interactive case
 alias spark-shell="shifter spark-shell $SPARKOPTS"
 alias pyspark="shifter pyspark $SPARKOPTS"
 alias spark-submit="shifter spark-submit $SPARKOPTS"
