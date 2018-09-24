@@ -27,7 +27,7 @@ IMG=registry.services.nersc.gov/plaszczy/spark_desc:latest
 
 echo "IMG=$IMG"
 
-if ! [ -d /global/cscratch1/sd/$USER ] then 
+if ! [ -d /global/cscratch1/sd/$USER ] ; then 
 echo "creating NodeCache in /global/cscratch1/sd/$USER" 
 mkdir /global/cscratch1/sd/$USER
 fi
