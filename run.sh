@@ -25,7 +25,7 @@ VERSION=0.1.0
 sbt ++${SBT_VERSION} package
 
 # External JARS
-SF=lib/spark-fits_2.11-0.4.0.jar
+SF=lib/spark-fits_2.11-0.6.0.jar
 HP=lib/jhealpix.jar
 
 # Parameters (put your file)

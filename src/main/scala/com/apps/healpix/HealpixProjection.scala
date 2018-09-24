@@ -18,6 +18,8 @@ package com.apps.healpix
 
 // Scala utils
 import scala.util.Try
+import scala.collection.mutable.ArrayBuffer
+import java.io._
 
 // Spark
 import org.apache.spark.sql.DataFrame
@@ -43,18 +45,18 @@ case class JobContext(session: SparkSession, grid: HealpixGrid, df_index: Datase
 
 object HealpixProjection {
 
-  def time[R](text: String, block: => R): R = {
+  def time[R](text: String, block: => R): Double = {
     val t0 = System.nanoTime()
     val result = block
     val t1 = System.nanoTime()
 
-    var dt:Double = (t1 - t0).asInstanceOf[Double] / 1000000000.0
+    val dt:Double = (t1 - t0).asInstanceOf[Double] / 1000000000.0
 
     val unit = "S"
 
     println("\n" + text + "> Elapsed time:" + " " + dt + " " + unit)
 
-    result
+    dt
   }
 
   /**
@@ -204,19 +206,30 @@ object HealpixProjection {
      //.persist(StorageLevel.MEMORY_ONLY_SER)
 
     for (l <- 1 to loop) {
+      var ddt=ArrayBuffer[Double]()
       // Loop over shells, make an histogram, and save results.
       for (pos <- shells) {
         val start = pos._1
         val stop = pos._2
-        val map = time("shell proj:"+pos,
+        val t = time("shell proj:"+pos,
           jc.df_index.filter(col("z").between(start,stop))
             .map(x=> jc.grid.index(dec2theta(x.dec), ra2phi(x.ra)))
             .groupBy("value")
             .count()
             .collect()
         )
-      }
-    }
+        ddt+=t
+      } //shells
+      //flush to file
+      val file = "perf_tomosca.txt"
+      val append=true
+      val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file,append)))
+      for (x <- ddt) writer.write(x.toString+"\t")
+      writer.write("\n")
+      writer.close
+
+    } //loop
+
   }
 
   def neighbours(jc: JobContext, loop: Int = 1) = {
@@ -352,7 +365,7 @@ object HealpixProjection {
     val replication : Int = Try{args(2).toInt}.getOrElse(0)
     val loop : Int = Try{args(3).toInt}.getOrElse(1)
 
-    val jc = time("Intialize", initialize(catalogFilename, nside, replication))
+    val jc = initialize(catalogFilename, nside, replication)
 
     // time("job1", redshiftShell(jc, loop))
     // val result = time("job2", job2(jc))
@@ -360,7 +373,7 @@ object HealpixProjection {
 
     // Benchmark paper
     //val result = time("benchmark", ioBenchmark(jc, loop))
-    val result = time("tomo",redshiftShell(jc, loop))
+    val t:Double = time("tomo",redshiftShell(jc, loop))
     // val result = neighbours(jc, loop)
     // val result = intersection(jc.session, catalogFilename, replication, nside, loop)
   }
