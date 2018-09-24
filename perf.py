@@ -12,10 +12,10 @@ def reject_outliers(data, m = 3.):
 labels=["load(HDU)","PZ + show(5)","cache (count)","stat(z)","stat(all)","minmax(z)","histo dataframe","histo UDF","histo pandas UDF"]
 
         
-tsca=genfromtxt("nersc/scala_perf.txt")
+tsca=genfromtxt("nersc2/scala_perf.txt")
 tsca=np.transpose(tsca)
 
-tpy=genfromtxt("nersc/python_perf.txt")
+tpy=genfromtxt("nersc2/python_perf.txt")
 tpy=np.transpose(tpy)
 
 figure(figsize=(15,10))
@@ -34,3 +34,17 @@ for i in range(len(tpy)):
 
 tight_layout()
 show()
+
+#tomo
+p=loadtxt("nersc/tomo_python1.txt",unpack=True)
+
+print(p)
+#les moyennes
+print(mean(p,axis=1))
+
+#moyenne par bin
+print(mean(p,axis=1).mean())
+
+
+#total
+mean(p,axis=1).sum()
