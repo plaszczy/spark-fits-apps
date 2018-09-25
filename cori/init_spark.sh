@@ -31,9 +31,9 @@ n_executors=$(($NODES-1))
 #executor_mem=48
 #driver_mem=4
 
-#config NERSC
+#config NERSC (from Lisa)
 executor_cores=32
-executor_mem=50
+executor_mem=100
 driver_mem=10
 
 
