@@ -1,7 +1,9 @@
 
 
 #list of jars: currently SparkFITS
-JARS=/global/homes/p/plaszczy/Spark/spark-fits-apps/lib/spark-fits_2.11-0.6.0.jar
+SF=/global/homes/p/plaszczy/Spark/spark-fits-apps/lib/spark-fits_2.11-0.6.0.jar
+JARS=$SF
+
 export EXEC_CLASSPATH=$JARS
 
 module load spark/2.3.0
@@ -24,7 +26,7 @@ fi
 master="--master $SPARKURL"
 n_executors=$(($NODES-1))
 
-#config UPSUD (6 NODES)
+#config UPSUD (on 6 NODES)
 #executor_cores=27
 #executor_mem=48
 #driver_mem=4

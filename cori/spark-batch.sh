@@ -24,7 +24,7 @@ echo "running $exe on $NODES nodes for $t mins on queue $queue"
 
 export NODES
 
-IMG=registry.services.nersc.gov/plaszczy/spark_desc:latest
+IMG=registry.services.nersc.gov/plaszczy/spark_desc:v2.3.0
 
 if ! [ -d /global/cscratch1/sd/$USER ] ; then 
 echo "creating NodeCache in /global/cscratch1/sd/$USER"
