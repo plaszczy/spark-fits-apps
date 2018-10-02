@@ -2,7 +2,7 @@
 
 nargs=$#
 if ! [ $nargs -eq 3 ]; then
-echo "usage: spark-batch exec N(#nodes) t(mins)"
+echo "usage: spark-batch exec-file N(#nodes) time(mins)"
 return
 fi
 

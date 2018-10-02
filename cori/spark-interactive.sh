@@ -22,7 +22,6 @@ echo "running on $NODES nodes for $t mins on queue $queue"
 export NODES
 
 #IMG=nersc/spark-2.3.0:v1
-#IMG=docker:lgerhardt/test_updated_python:v1
 IMG=registry.services.nersc.gov/plaszczy/spark_desc:latest
 
 echo "IMG=$IMG"

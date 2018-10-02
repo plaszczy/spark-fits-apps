@@ -1,9 +1,7 @@
 
 
 #list of jars: currently SparkFITS
-SF=/global/homes/p/plaszczy/Spark/spark-fits-apps/lib/spark-fits_2.11-0.6.0.jar
-
-JARS=$SF
+JARS=/global/homes/p/plaszczy/Spark/spark-fits-apps/lib/spark-fits_2.11-0.6.0.jar
 export EXEC_CLASSPATH=$JARS
 
 module load spark/2.3.0
@@ -46,12 +44,8 @@ echo "mem used= ${total_mem} GB"
 echo "mem for cache $(echo $n_executors*$executor_mem*0.6|bc) GB"
 
 
-export SPARKOPTS="$master --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g --jars $SF"
+#export SPARKOPTS="$master --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g --jars $JARS"
 
-#printenv SPARKOPTS
+export SPARKOPTS="$master -jars $JARS"
 
-
-#aliases for interactive case
-#alias spark-shell="shifter spark-shell $SPARKOPTS"
-#alias pyspark="shifter pyspark $SPARKOPTS"
-#alias spark-submit="shifter spark-submit $SPARKOPTS"
+printenv SPARKOPTS
