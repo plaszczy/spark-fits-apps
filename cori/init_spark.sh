@@ -18,36 +18,27 @@ echo "SparkFITS=$SF"
 echo "FITS input dir=$fitsdir"
 
 
-if [ -z "$NODES" ] ; then
-echo "number of NODES cannot be found: did you use toSpark to log-in?"
-return
-fi
 
 master="--master $SPARKURL"
-n_executors=$(($NODES-1))
 
+#in case you want to explcitey define the setup, but default is OK
 #config UPSUD (on 6 NODES)
 #executor_cores=27
 #executor_mem=48
 #driver_mem=4
 
-#config NERSC (from Lisa)
-executor_cores=32
-executor_mem=100
-driver_mem=10
+#config NERSC (from Lisa G)
+#executor_cores=32
+#executor_mem=100
+#driver_mem=10
+#n_executors=$(($SLURM_JOB_NUM_NODES=2-1))
 
-
-total_mem=$(($driver_mem+$n_executors*$executor_mem))
-ncores_tot=$(($n_executors*$executor_cores))
-
-echo "#executors=$n_executors"
-echo "#cores used=$ncores_tot"
-echo "mem used= ${total_mem} GB"
-echo "mem for cache $(echo $n_executors*$executor_mem*0.6|bc) GB"
-
-
+#total_mem=$(($driver_mem+$n_executors*$executor_mem))
+#ncores_tot=$(($n_executors*$executor_cores))
 #export SPARKOPTS="$master --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g --jars $JARS"
 
-export SPARKOPTS="$master -jars $JARS"
+export SPARKOPTS="$master --jars $JARS"
 
-printenv SPARKOPTS
+alias pyspark="which pyspark && shifter pyspark $SPARKOPTS"
+
+echo "created alias psyspark="$(which psyspark)
