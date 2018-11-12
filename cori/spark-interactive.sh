@@ -2,7 +2,11 @@
 
 nargs=$#
 if ! [ $nargs -eq 2 ]; then
+echo "##################################################################################"
 echo "usage: toSpark N(#nodes) t(mins)"
+echo "# each cori node has 32 cores and 100GB RAM (from which 60% will be used for cache)"
+echo "# if you ask for less than 30 mins you will be running on the debug queue"
+echo "##################################################################################"
 return
 fi
 declare -i NODES

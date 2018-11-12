@@ -39,6 +39,6 @@ master="--master $SPARKURL"
 
 export SPARKOPTS="$master --jars $JARS"
 
-alias pyspark="which pyspark && shifter pyspark $SPARKOPTS"
+alias run_pyspark="shifter pyspark $SPARKOPTS"
 
-echo "created alias psyspark="$(which psyspark)
+type -all run_pyspark
