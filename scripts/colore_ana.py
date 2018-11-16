@@ -170,7 +170,7 @@ def benchmark(ff):
 
 #main
 import os
-input=os.environ.get("fitsdir","file:///home/plaszczy/fits/galbench_srcs_s1_0.fits")
+ff=os.environ.get("fitsdir","file:///home/plaszczy/fits/galbench_srcs_s1_0.fits")
 
 spark = SparkSession.builder.getOrCreate()
 sc=spark.sparkContext
@@ -182,6 +182,6 @@ logger.LogManager.getLogger("org"). setLevel(level)
 logger.LogManager.getLogger("akka").setLevel(level)
 
 #single run
-ddt=np.array(benchmark(input))
+ddt=np.array(benchmark(ff))
 with open("python_perf.txt", 'ab') as abc:
     np.savetxt(abc, ddt.reshape(1,ddt.shape[0]))

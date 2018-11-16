@@ -1,6 +1,6 @@
 from pylab import *
 
-label=["read+cache","statistics","df(native)","df(+udf)","tomo (1 bin)"]
+label=["read+cache","statistics","histo(native)","histo(udf)","tomo (1 bin)"]
 
 upsud_py=[113.,9.8,11.5,43,30]
 upsud_sca=[117.,11,13,13.9,13]
@@ -17,15 +17,15 @@ nersc2_sca=[54,6.5,11.6,8.3,11.9]
 x=array([0,2,4,6,8])
 
 figure()
-bar(x-0.2, upsud_sca,width=0.2,color='b',align='center',tick_label=label)
-bar(x, nersc_sca,width=0.2,color='g',align='center')
-bar(x+0.2, nersc2_sca,width=0.2,color='r',align='center')
+bar(x-0.2, upsud_py,width=0.2,color='r',align='center',tick_label=label)
+bar(x, upsud_sca,width=0.2,color='g',align='center')
 ylabel("user time (s)")
 ylim(0,120)
 
 #title("python")
-title("scala")
-legend(["UPSUD","NERSC=UPSUD","NERSC=UPSUD*2"])
+#title("scala")
+#legend(["UPSUD","NERSC=UPSUD","NERSC=UPSUD*2"])
+legend(["python","scala"])
 
 show()
 

@@ -18,8 +18,7 @@ echo "SparkFITS=$SF"
 echo "FITS input dir=$fitsdir"
 
 
-
-master="--master $SPARKURL"
+master=""
 
 #in case you want to explcitey define the setup, but default is OK
 #config UPSUD (on 6 NODES)
@@ -35,12 +34,12 @@ n_executors=$(($SLURM_JOB_NUM_NODES-1))
 
 total_mem=$(($driver_mem+$n_executors*$executor_mem))
 ncores_tot=$(($n_executors*$executor_cores))
+
 echo "mem=${total_mem}"
 echo "cores=${ncores_tot}"
 
-export SPARKOPTS="$master --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g --jars $JARS"
+export SPARKOPTS="--master $SPARKURL --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g --jars $JARS"
 
-#export SPARKOPTS="$master --jars $JARS"
 
 alias run_pyspark="shifter pyspark $SPARKOPTS "
 
