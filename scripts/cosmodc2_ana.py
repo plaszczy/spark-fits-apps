@@ -24,11 +24,11 @@ class Timer:
     def __init__(self):
         self.t0=time()
         self.dt=0.
-
+        
     def step(self,ana):
         t1=time()
         self.dt=t1-self.t0
-       self.t0=t1
+        self.t0=t1
         print(ana+": {:2.1f}s ".format(self.dt))
         return self.dt
 
@@ -73,7 +73,7 @@ timer.step(ana)
 ana="histo redshift"
 h_z=df_histo(df,'redshift',100,bounds=(0,3)).toPandas()
 dz=3./100
-plt.bar(h_z['loc'].values,h_z['count'].values,dz,label='redshift',color='white')
+plt.bar(h_z['loc'].values,h_z['count'].values,dz,label='redshift',color='white',edgecolor='black')
 plt.xlabel("z")
 plt.ylabel("dN/dz")
 plt.show()
