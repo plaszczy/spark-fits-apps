@@ -48,15 +48,12 @@ timer=Timer()
 
 ana="load"
 ff=os.path.join(os.environ['COSMODC2'],"xyz_v1.0.parquet")
-
 df_all=spark.read.parquet(ff)
 df_all.printSchema()
 timer.step(ana)
 
 ana="cache"
-
-df=df_all.select('ra','dec','redshift','redshift_true').cache()
-
+df=df_all.select('ra','dec','redshift','halo_id').cache()
 N=df.count()
 print(N)
 timer.step(ana)
@@ -77,6 +74,14 @@ plt.bar(h_z['loc'].values,h_z['count'].values,dz,label='redshift',color='white',
 plt.xlabel("z")
 plt.ylabel("dN/dz")
 plt.show()
-
 timer.step(ana)
 
+
+ana="number of haloes"
+Nh=df.select("halo_id").distinct().count()
+timer.step(ana)
+
+
+ana="number of galxies per halo"
+Nh=df.select("halo_id").distinct().count()
+timer.step(ana)
