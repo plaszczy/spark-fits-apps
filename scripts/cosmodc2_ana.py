@@ -48,12 +48,13 @@ timer=Timer()
 
 ana="load"
 ff=os.path.join(os.environ['COSMODC2'],"xyz_v1.1.4.parquet")
+print("input={}".format(ff))
 df_all=spark.read.parquet(ff)
 df_all.printSchema()
 timer.step(ana)
 
 ana="cache"
-df=df_all.filter("halo_id>0").cache()
+df=df_all.select("halo_id","ra","dec","redshift","position_x","position_y","position_z").filter("halo_id>0").cache()
 N=df.count()
 print(N)
 timer.step(ana)
@@ -81,7 +82,6 @@ ana="join by halo_id count"
 df=df.join(df_halo,"halo_id").cache().withColumnRenamed("count","halo_members").cache()
 df.count()
 
-
+df.show()
 minmax(df.filter(df['halo_members']==1),'is_central')
-Out[46]: Row(min(is_central)=False, max(is_central)=True)
 
