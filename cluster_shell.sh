@@ -25,7 +25,9 @@ echo "working on $fitsdir"
 
 #cluster: 1 machine(executor= 18 cores de 2 GB=36GB)
 local="--master $master spark://134.158.75.222:7077 "
+if [ -z "${n_executors}" ] ;then 
 n_executors=9
+fi
 executor_cores=17
 executor_mem=30
 driver_mem=4

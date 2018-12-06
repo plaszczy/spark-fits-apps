@@ -6,13 +6,13 @@ from pyspark.sql.functions import randn
 from pyspark.sql.types import IntegerType,FloatType
 from pyspark.sql.functions import pandas_udf, PandasUDFType
 
-import os,sys
-
 import pandas as pd
 import numpy as np
 import healpy as hp
 import matplotlib.pyplot as plt
 
+
+import os,sys
 sys.path.insert(0,"..")
 from df_tools import *
 
@@ -47,13 +47,13 @@ timer=Timer()
 #
 
 ana="load"
-ff=os.path.join(os.environ['COSMODC2'],"xyz_v1.0.parquet")
+ff=os.path.join(os.environ['COSMODC2'],"xyz_v1.1.4.parquet")
 df_all=spark.read.parquet(ff)
 df_all.printSchema()
 timer.step(ana)
 
 ana="cache"
-df=df_all.select('ra','dec','redshift','halo_id').cache()
+df=df_all.filter("halo_id>0").cache()
 N=df.count()
 print(N)
 timer.step(ana)
@@ -68,20 +68,20 @@ print("z \in [{},{}]".format(m[0],m[1]))
 timer.step(ana)
 
 ana="histo redshift"
-h_z=df_histo(df,'redshift',100,bounds=(0,3)).toPandas()
-dz=3./100
-plt.bar(h_z['loc'].values,h_z['count'].values,dz,label='redshift',color='white',edgecolor='black')
-plt.xlabel("z")
-plt.ylabel("dN/dz")
-plt.show()
+h_z=plot_histo(df,'redshift',100)
 timer.step(ana)
 
 
 ana="number of haloes"
-Nh=df.select("halo_id").distinct().count()
-timer.step(ana)
+df_halo=df.groupBy("halo_id").count().cache()
+#df_halo.describe(['count']).show()
+plot_histo(df_halo,'count',100)
+
+ana="join by halo_id count"
+df=df.join(df_halo,"halo_id").cache().withColumnRenamed("count","halo_members").cache()
+df.count()
 
 
-ana="number of galxies per halo"
-Nh=df.select("halo_id").distinct().count()
-timer.step(ana)
+minmax(df.filter(df['halo_members']==1),'is_central')
+Out[46]: Row(min(is_central)=False, max(is_central)=True)
+
