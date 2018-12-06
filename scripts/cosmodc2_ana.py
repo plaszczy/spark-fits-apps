@@ -54,9 +54,8 @@ df_all.printSchema()
 timer.step(ana)
 
 ana="cache"
-df=df_all.select("halo_id","ra","dec","redshift","position_x","position_y","position_z").filter("halo_id>0").cache()
-N=df.count()
-print(N)
+df=df_all.select("halo_id","ra","dec","redshift").filter("halo_id>0").cache()
+print(df.count())
 timer.step(ana)
 
 ana="stat"
