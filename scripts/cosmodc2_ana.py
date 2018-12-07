@@ -54,9 +54,20 @@ df_all.printSchema()
 timer.step(ana)
 
 ana="cache"
-df=df_all.select("halo_id","ra","dec","redshift").filter("halo_id>0").cache()
-print(df.count())
+
+df=df_all.select("halo_id","redshift","postion_x","postion_y","postion_z").filter("halo_id>0")
+
+#df=df_all.select("halo_id","ra","dec","redshift").filter("halo_id>0")
+#df=df\
+#  .withColumn("x",df.redshift*F.sin(F.radians(90-df.dec))*F.cos(F.radians(df.ra)))\
+#  .withColumn("y",df.redshift*F.sin(F.radians(90-df.dec))*F.sin(F.radians(df.ra)))\
+#  .withColumn("z",df.redshift*F.cos(F.radians(90-df.dec)))
+
+df.cache().count()
+
 timer.step(ana)
+
+
 
 ana="stat"
 df.describe().show()
