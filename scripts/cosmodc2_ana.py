@@ -84,3 +84,19 @@ df.count()
 df.show()
 minmax(df.filter(df['halo_members']==1),'is_central')
 
+#GUY
+from pyspark.sql import functions as F
+
+df=df_all.select("halo_id","ra","dec","redshift").filter("halo_id>0")
+center_ra = 62
+half_ra = 0.9
+center_dec = -38.6
+half_dec = 0.9
+
+df=df.filter( (F.abs(df.ra-center_ra)<half_ra) & \
+                  (F.abs(df.dec-center_dec)<half_dec) & \
+                  (df.redshift.between(1,1.2)) )\
+                  .drop('halo_id').cache()
+
+df.count()
+df.toPandas().to_csv('out.csv')
