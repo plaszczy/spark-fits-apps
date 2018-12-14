@@ -10,6 +10,13 @@ import matplotlib.pyplot as plt
 def minmax(df,col):
     return df.select(F.min(col),F.max(col)).first()
 
+def nans(df,col=None):
+    if col==None:
+        return df.count()-df.na.drop().count()
+    else:
+        return df.filter(df[col].contains(np.nan)).count()
+
+
 def df_histo(df,col,Nbins,bounds=None):
     if (bounds==None) :
         m=minmax(df,col)
