@@ -19,15 +19,20 @@ echo "missing shell [pyspark/spark-shell opts]"
 exit
 fi
 
+n_executors=9
+if [ $nargs -eq 2 ] ; then
+    n_executors=$2
+fi
+
+
+
 # Parameters (put your file)
 export fitsdir="hdfs://134.158.75.222:8020//lsst/LSST10Y"
 echo "working on $fitsdir"
 
 #cluster: 1 machine(executor= 18 cores de 2 GB=36GB)
 local="--master $master spark://134.158.75.222:7077 "
-if [ -z "${n_executors}" ] ;then 
-n_executors=9
-fi
+
 executor_cores=17
 executor_mem=30
 driver_mem=4
@@ -46,6 +51,6 @@ opts=" $local --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot
 
 
 # Run it!
-cmd="$* $opts --jars lib/spark-fits_2.11-0.6.0.jar"
+cmd="$1 $opts --jars lib/spark-fits_2.11-0.6.0.jar"
 echo $cmd
 eval $cmd

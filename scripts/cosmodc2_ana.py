@@ -98,7 +98,10 @@ minmax(df.filter(df['halo_members']==1),'is_central')
 #GUY
 from pyspark.sql import functions as F
 
-df=df_all.select("halo_id","ra","dec","redshift").filter("halo_id>0")
+ff=os.path.join(os.environ['COSMODC2'],"xyz_v1.1.4.parquet")
+print("input={}".format(ff))
+df_all=spark.read.parquet(ff)
+df=df_all.select("halo_id","ra","dec","redshift","position_x","position_y","position_z").filter("halo_id>0")
 center_ra = 62
 half_ra = 0.9
 center_dec = -38.6
@@ -109,5 +112,18 @@ df=df.filter( (F.abs(df.ra-center_ra)<half_ra) & \
                   (df.redshift.between(1,1.2)) )\
                   .drop('halo_id').cache()
 
+
+center_x=900.
+center_y=1750.
+center_z=-1600.
+dx=150
+
+df=df_all.select("halo_id","ra","dec","redshift","position_x","position_y","position_z").filter("halo_id>0")
+df=df.filter( (F.abs(df.position_x-center_x)<dx) &\
+                  (F.abs(df.position_y-center_y)<dx) &\
+                  (F.abs(df.position_z-center_z)<dx))\
+                  .drop('halo_id').cache()
+
+
 df.count()
-df.toPandas().to_csv('out.csv')
+df.toPandas().to_csv('out_xyz.csv')
