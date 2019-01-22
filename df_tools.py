@@ -17,7 +17,7 @@ def nans(df,col=None):
         return df.filter(df[col].contains(np.nan)).count()
 
 
-def df_histo(df,col,Nbins,bounds=None):
+def df_hist(df,col,Nbins,bounds=None):
     if (bounds==None) :
         m=minmax(df,col)
         zmin=m[0]
@@ -33,8 +33,8 @@ def df_histo(df,col,Nbins,bounds=None):
     return h.select("bin",(zmin+dz/2+h['bin']*dz).alias('loc'),"count").drop("bin"),dz,(zmin,zmax)
 
 
-def plot_histo(df,col,Nbins=50,bounds=None):    
-    result=df_histo(df,col,Nbins,bounds)
+def df_histplot(df,col,Nbins=50,bounds=None):    
+    result=df_hist(df,col,Nbins,bounds)
     hp=result[0].toPandas()
     step=result[1]
     plt.bar(hp['loc'].values,hp['count'].values,step,color='white',edgecolor='black')
@@ -42,7 +42,7 @@ def plot_histo(df,col,Nbins=50,bounds=None):
     plt.show()
     return hp
 
-def plot_histo2(df,col1,col2,Nbin1=50,Nbin2=50,bounds=None):
+def df_histplot2(df,col1,col2,Nbin1=50,Nbin2=50,bounds=None):
     if (bounds==None) :
         b=df.select(F.min(col1),F.max(col1),F.min(col2),F.max(col2)).first()
         zmin1=b[0]

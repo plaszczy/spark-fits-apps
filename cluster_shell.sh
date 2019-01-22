@@ -14,21 +14,17 @@
 # limitations under the License.
 
 nargs=$#
+echo "nargs=$nargs"
 if [ $nargs -eq 0 ] ; then
-echo "missing shell [pyspark/spark-shell opts]"
+echo "missing shell [pyspark/spark-shell opts (jup)]"
 exit
 fi
 
 n_executors=9
-if [ $nargs -eq 2 ] ; then
+if [ $nargs -gt 1 ] ; then
     n_executors=$2
 fi
 
-
-
-# Parameters (put your file)
-export fitsdir="hdfs://134.158.75.222:8020//lsst/LSST10Y"
-echo "working on $fitsdir"
 
 #cluster: 1 machine(executor= 18 cores de 2 GB=36GB)
 local="--master $master spark://134.158.75.222:7077 "
@@ -48,9 +44,16 @@ echo "mem for cache $(echo $n_executors*$executor_mem*0.6|bc) GB"
 opts=" $local --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g "
 
 
-
-
 # Run it!
 cmd="$1 $opts --jars lib/spark-fits_2.11-0.6.0.jar"
+
+#jup
+if [ $nargs -eq 3 ]; then 
+export PYSPARK_DRIVER_PYTHON=
+cmd="PYSPARK_DRIVER_PYTHON_OPTS='/opt/anaconda/bin/jupyter-notebook --no-browser --port=7777' $cmd"
+fi
+
+
+
 echo $cmd
 eval $cmd
