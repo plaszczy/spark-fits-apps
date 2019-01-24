@@ -43,18 +43,20 @@ echo "mem used= ${total_mem} GB"
 echo "mem for cache $(echo $n_executors*$executor_mem*0.6|bc) GB"
 opts=" $local --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g "
 
+#
+SF="/spark_mongo_tmp/stephane.plaszczynski/spark-fits-apps/lib/spark-fits_2.11-0.6.0.jar"
 
 # Run it!
-cmd="$1 $opts --jars lib/spark-fits_2.11-0.6.0.jar"
+cmd="$1 $opts --jars $SF"
 
 export PYSPARK_DRIVER_PYTHON=ipython
+export FITSDIR=$LSST10Y
+
 #jup
 if [ $nargs -eq 3 ]; then 
 export PYSPARK_DRIVER_PYTHON=
 cmd="PYSPARK_DRIVER_PYTHON_OPTS='/opt/anaconda/bin/jupyter-notebook --no-browser --port=24501' $cmd"
 fi
-
-
 
 echo $cmd
 eval $cmd
