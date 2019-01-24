@@ -47,10 +47,11 @@ opts=" $local --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot
 # Run it!
 cmd="$1 $opts --jars lib/spark-fits_2.11-0.6.0.jar"
 
+export PYSPARK_DRIVER_PYTHON=ipython
 #jup
 if [ $nargs -eq 3 ]; then 
 export PYSPARK_DRIVER_PYTHON=
-cmd="PYSPARK_DRIVER_PYTHON_OPTS='/opt/anaconda/bin/jupyter-notebook --no-browser --port=7777' $cmd"
+cmd="PYSPARK_DRIVER_PYTHON_OPTS='/opt/anaconda/bin/jupyter-notebook --no-browser --port=24501' $cmd"
 fi
 
 
