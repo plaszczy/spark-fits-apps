@@ -6,6 +6,7 @@ from pyspark.sql.functions import randn
 from pyspark.sql.types import IntegerType,FloatType
 from pyspark.sql.functions import pandas_udf, PandasUDFType
 
+
 import pandas as pd
 import numpy as np
 import healpy as hp
@@ -46,12 +47,45 @@ def benchmark(ff):
     ddt.append(timer.step())
     timer.print(ana)
     #######
-    ana="2: PZ + show(5)"
-    gal=gal.withColumn("zrec",(gal.z+0.03*(1+gal.z)*randn()).astype('float'))
+    #ana="2: gauss PZ + show(5)"
+    #gal=gal.withColumn("zrec",(gal.z+0.03*(1+gal.z)*randn()).astype('float'))
     #only randoms
+    #gal.show(5)
+    #ddt.append(timer.step())
+    #timer.print(ana)
+
+    ana="2b: PZ full + show(5)"
+    trans=np.loadtxt('cum_inv.txt')
+
+    @pandas_udf('float', PandasUDFType.SCALAR)
+    def get_zrec(z,u):
+        zmin=0.
+        zmax=3.
+        Nz=301
+        step_z=(zmax-zmin)/Nz
+        iz=np.array((z-zmin-step_z/2)/step_z,dtype='int')
+        
+        umin=0.
+        umax=1.
+        Nu=100
+        step_u=(umax-umin)/Nu
+        iu=np.array((u-umin-step_u/2)/step_u,dtype='int') 
+    
+        return pd.Series(trans[iz,iu])
+
+    #column of uniform randoms
+    gal=gal.withColumn("u",rand().astype('float'))
+    gal=gal.withColumn("zrec",get_zrec("zrec","u")
     gal.show(5)
     ddt.append(timer.step())
     timer.print(ana)
+
+    #only 
+    gal.show(5)
+    ddt.append(timer.step())
+    timer.print(ana
+
+
 
     ####
     ana="3: cache (count)"
