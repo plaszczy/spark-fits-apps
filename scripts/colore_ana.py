@@ -55,7 +55,7 @@ def benchmark(ff):
     #timer.print(ana)
 
     ana="2b: PZ full + show(5)"
-    trans=np.loadtxt('cum_inv.txt')
+    trans=np.loadtxt('scripts/cum_inv.txt')
 
     @pandas_udf('float', PandasUDFType.SCALAR)
     def get_zrec(z,u):
@@ -75,21 +75,15 @@ def benchmark(ff):
 
     #column of uniform randoms
     gal=gal.withColumn("u",rand().astype('float'))
-    gal=gal.withColumn("zrec",get_zrec("zrec","u")
+    gal=gal.withColumn("zrec",get_zrec("z","u")).drop("u")
     gal.show(5)
     ddt.append(timer.step())
     timer.print(ana)
 
-    #only 
-    gal.show(5)
-    ddt.append(timer.step())
-    timer.print(ana
-
-
-
     ####
     ana="3: cache (count)"
-    print("N={}".format(gal.cache().count()))
+    gal=gal.cache()
+    print("N={}".format(gal.count()))
     ddt.append(timer.step())
     timer.print(ana)
 
