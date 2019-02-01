@@ -170,9 +170,7 @@ def benchmark(ff):
 
 #main
 import os
-#ff=os.environ.get("LSST10Y","file:///home/plaszczy/fits/galbench_srcs_s1_0.fits")
-#yarn
-ff="/lsst/LSST10Y"
+ff=os.environ['FITSDIR']
 
 spark = SparkSession.builder.getOrCreate()
 sc=spark.sparkContext

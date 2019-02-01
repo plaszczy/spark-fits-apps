@@ -27,8 +27,8 @@ fi
 echo "runinng on  ${n_executors} executors"
 
 #cluster: 1 machine(executor= 18 cores de 2 GB=36GB)
-#master="--master spark://134.158.75.222:7077 "
-master="--master yarn "
+
+
 
 executor_cores=17
 executor_mem=29
@@ -43,9 +43,13 @@ echo "#cores used=$ncores_tot"
 echo "mem used= ${total_mem} GB"
 echo "mem for cache $(echo $n_executors*$executor_mem*0.6|bc) GB"
 
-#opts=" $master --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g "
+#LOCAL
+master="--master spark://134.158.75.222:7077 "
+opts=" $master --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g "
 
-opts=" $master --driver-memory ${driver_mem}g --num-executors ${n_executors} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g "
+#YARN
+#master="--master yarn "
+#opts=" $master --driver-memory ${driver_mem}g --num-executors ${n_executors} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g "
 
 #
 SF="/spark_mongo_tmp/stephane.plaszczynski/spark-fits-apps/lib/spark-fits_2.11-0.6.0.jar"
