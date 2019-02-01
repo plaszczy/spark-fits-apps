@@ -74,7 +74,7 @@ def benchmark(ff):
         return pd.Series(trans[iz,iu])
 
     #column of uniform randoms
-    gal=gal.withColumn("u",rand().astype('float'))
+    gal=gal.withColumn("u",F.rand().astype('float'))
     gal=gal.withColumn("zrec",get_zrec("z","u")).drop("u")
     gal.show(5)
     ddt.append(timer.step())
