@@ -48,7 +48,7 @@ def benchmark(ff):
     timer.print(ana)
     #######
     #ana="2: gauss PZ + show(5)"
-    #gal=gal.withColumn("zrec",(gal.z+0.03*(1+gal.z)*randn()).astype('float'))
+    #gal=gal.withColumn("zrec",(gal.z+0.03*(1+gal.z)*F.randn()).astype('float'))
     #only randoms
     #gal.show(5)
     #ddt.append(timer.step())

@@ -28,7 +28,7 @@ class Timer:
 
     def print(self,ana):
         print("-"*30)
-        print(ana+"& {:2.1f} &".format(self.dt))
+        print(ana+": {:2.1f}s".format(self.dt))
         print("-"*30)
 
 
@@ -58,13 +58,17 @@ gal=spark.read.format("fits").option("hdu",1)\
 gal.printSchema()
 ddt.append(timer.step())
 timer.print(ana)
-#####
+
+##### gauss
+gal=gal.withColumn("zrec_g",(gal.z+0.03*(1+gal.z)*F.randn()).astype('float'))
+
+#PZ
 ana="2b: PZ full + show(5)"
 trans=np.loadtxt('scripts/cum_inv.txt')
 
 @pandas_udf('float', PandasUDFType.SCALAR)
 def get_zrec(z,u):
-        min=0.
+        zmin=0.
         zmax=3.
         Nz=301
         step_z=(zmax-zmin)/Nz
@@ -94,34 +98,32 @@ timer.print(ana)
 
 #####
 ana="4: statistics z"
-gal.describe(['z','zrec']).show()
-ddt.append(timer.step())
-timer.print(ana)
-
-ana="6: minmax z"
-minmax=gal.select(F.min("z"),F.max("z")).first()
-zmin=minmax[0]
-zmax=minmax[1]
-Nbins=100
-dz=(zmax-zmin)/Nbins
+gal.describe(['z','zrec_g','zrec']).show()
 ddt.append(timer.step())
 timer.print(ana)
 
 ###############
 ana="7: histo z"
-#df on z 
-#zbin=gal.select(gal.z,((gal['z']-zmin)/dz).astype('int').alias('bin'))
-zbin=gal.select(gal.z,((gal['z']-zmin-dz/2)/dz).cast(IntegerType()).alias('bin'))
-h=zbin.groupBy("bin").count().orderBy(F.asc("bin"))
-p=h.select("bin",(zmin+dz/2+h['bin']*dz).alias('zbin'),"count").drop("bin").toPandas()
+zmin=0.
+zmax=2.4
+Nbins=100
+
+from df_tools import df_hist
+h,dz,b=df_hist(gal,'z',Nbins,bounds=(zmin,zmax))
+p=h.toPandas()
 #p.to_csv("p.csv")
 
 ddt.append(timer.step())
 timer.print(ana)
-    #
-ana="histo z PZ"
-import df_tools
-p3=df_tools.hist_df(gal,"zrec",Nbins,bounds=minmax).toPandas()
 
-#p3.to_csv("prec3.csv")
+ana='histo z_g'
+h,dz,b=df_hist(gal,'zrec_g',Nbins,bounds=(zmin,zmax))
+p3=h.toPandas()
+ddt.append(timer.step())
+timer.print(ana)
+
+ana='histo z_PZ'
+h,dz,b=df_hist(gal,'zrec',Nbins,bounds=(zmin,zmax))
+p3_PZ=h.toPandas()
+ddt.append(timer.step())
 timer.print(ana)
