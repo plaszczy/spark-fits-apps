@@ -66,7 +66,9 @@ gal=gal.withColumn("zrec_g",(gal.z+0.03*(1+gal.z)*F.randn()).astype('float'))
 ana="2b: PZ full + show(5)"
 
 # read the inverse-cumulative file 
-cuminv=np.loadtxt('cum_inv.txt')
+cuminv=np.loadtxt('scripts/cuminv_gauss.txt')
+#cuminv=np.loadtxt('scripts/cuminv_gauss.txt')
+#cuminv=np.loadtxt('scripts/cuminv_bdt.txt')
 # we know the binnings that were used
 dz=0.01
 du=1/1000.
