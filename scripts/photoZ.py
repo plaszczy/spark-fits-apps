@@ -62,29 +62,30 @@ timer.print(ana)
 ##### gauss
 gal=gal.withColumn("zrec_g",(gal.z+0.03*(1+gal.z)*F.randn()).astype('float'))
 
-#PZ
+####full PZ
 ana="2b: PZ full + show(5)"
-trans=np.loadtxt('scripts/cum_inv.txt')
 
+# read the inverse-cumulative file 
+cuminv=np.loadtxt('cum_inv.txt')
+# we know the binnings that were used
+dz=0.01
+du=1/1000.
+
+#find indices and return the table values
 @pandas_udf('float', PandasUDFType.SCALAR)
-def get_zrec(z,u):
-        zmin=0.
-        zmax=3.
-        Nz=301
-        step_z=(zmax-zmin)/Nz
-        iz=np.array((z-zmin-step_z/2)/step_z,dtype='int')
-        
-        umin=0.
-        umax=1.
-        Nu=100
-        step_u=(umax-umin)/Nu
-        iu=np.array((u-umin-step_u/2)/step_u,dtype='int') 
-    
-        return pd.Series(trans[iz,iu])
+def z_PZ(zr,u):
+    iz=np.array(zr/dz,dtype='int')
+    iu=np.array(u/du,dtype='int') 
+    return pd.Series(cuminv[iz,iu])
 
-#column of uniform randoms
-gal=gal.withColumn("u",F.rand().astype('float'))
-gal=gal.withColumn("zrec",get_zrec("z","u")).drop("u")
+
+#add column of uniform random numbers
+gal=gal.withColumn("u",F.rand())
+
+#transform with the inverse-cumulative table
+gal=gal.withColumn("zrec",z_PZ("z","u")+dz/2)\
+       .drop("u")  #do not need u anymore
+
 gal.show(5)
 ddt.append(timer.step())
 timer.print(ana)
