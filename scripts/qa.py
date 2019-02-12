@@ -2,8 +2,6 @@ import os,sys
 sys.path.insert(0,os.path.join(os.getcwd(),".."))
 from df_tools import *
 
-import matplotlib.pyplot as plt
-
 from pyspark.sql import SparkSession
 
 # Initialise our Spark session
@@ -89,8 +87,10 @@ for c in df.columns:
 
 vals=["good","clean","extendedness","blendedness"]
 for v in vals:
-      df.select(v).na.drop().groupby(v).count().show()
+      df.select(v).na.drop().groupby(v).count().show(5)
 
+
+#import matplotlib.pyplot as plt
 
 
 #density
