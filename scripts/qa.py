@@ -36,7 +36,7 @@ timer.stop()
 
 
 # build selection by appending to string
-cols=["tract","patch","ra","dec","good","clean","extendedness","blendedness","psFlux_flag_i","psFlux_i","mag_i","mag_i_cModel"]
+cols=["tract","patch","ra","dec","good","clean","extendedness","blendedness","psFlux_flag_i","psFlux_i","mag_i","mag_i_cModel","snr_i_cModel"]
 print(cols)
 #use these columns
 df=df_all.select(cols)
@@ -68,7 +68,6 @@ timer.start()
 df=df.cache()
 N=df.count()
 print("raw {}M objects".format(N/1e6))
-df.show(5)
 timer.stop()
 
 
@@ -85,14 +84,41 @@ for c in df.columns:
     N_nans=N-df.select(c).na.drop().count()
     print("{} : {:2.1f}% Nans".format(c,float(N_nans/N)*100))
 
-vals=["good","clean","extendedness","blendedness"]
+vals=["good","clean","extendedness"]
 for v in vals:
-      df.select(v).na.drop().groupby(v).count().show(5)
+      df.select(v).groupby(v).count().show(5)
 
 
-#import matplotlib.pyplot as plt
+timer.start()
+#groupby indices and count the number of elements in each group
+df_map=df.groupBy("ipix").count()
+area=hp.nside2pixarea(nside, degrees=True)*3600
+df_map=df_map.withColumn("dens",df_map['count']/area).drop("count")
+#statistics per pixel
+df_map.describe(['dens']).show() 
+#back to python world
+map_p=df_map.toPandas()
+#now data is reduced create the healpy map
+map_c = np.full(hp.nside2npix(nside),hp.UNSEEN)
+map_c[map_p['ipix'].values]=map_p['dens'].values
+#map_c[map_c==0]=hp.UNSEEN
+timer.stop()
+
+A=map_p.index.size*area/3600
+print("map area={} deg2".format(map_p.index.size*area/3600))
+#plot
+
+import matplotlib.pyplot as plt
+plt.set_cmap('jet')
+resol= hp.nside2resol(nside,arcmin=True)
+hp.gnomview(map_c,rot=[55,-29.8],reso=resol,xsize=200,min=200,max=300)
+plt.savefig("newrun.png")
 
 
-#density
-#raw
 #qual
+dfqual=df.filter((df.mag_i_cModel<24) & (df.good==True) & (df.extendedness>0.9)) 
+print("df qual i<24 N={}".format(dfqual.count()))
+print("df qual i<24 SNR>10 N={}".format( dfqual.filter(df.snr_i_cModel>10).count()))
+Nexp=40*10**(-0.36)*A*3600
+print("exp number=".format(Nexp))
+
