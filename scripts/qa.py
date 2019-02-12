@@ -101,7 +101,6 @@ map_p=df_map.toPandas()
 #now data is reduced create the healpy map
 map_c = np.full(hp.nside2npix(nside),hp.UNSEEN)
 map_c[map_p['ipix'].values]=map_p['dens'].values
-#map_c[map_c==0]=hp.UNSEEN
 timer.stop()
 
 A=map_p.index.size*area/3600
@@ -114,11 +113,14 @@ resol= hp.nside2resol(nside,arcmin=True)
 hp.gnomview(map_c,rot=[55,-29.8],reso=resol,xsize=200,min=200,max=300)
 plt.savefig("newrun.png")
 
-
+####
 #qual
-dfqual=df.filter((df.mag_i_cModel<24) & (df.good==True) & (df.extendedness>0.9)) 
-print("df qual i<24 N={}".format(dfqual.count()))
-print("df qual i<24 SNR>10 N={}".format( dfqual.filter(df.snr_i_cModel>10).count()))
-Nexp=40*10**(-0.36)*A*3600
-print("exp number=".format(Nexp))
+dfqual=df.filter((df.mag_i_cModel<24) & (df.good==True) & (df.clean==True) &(df.extendedness>0.9)) 
+print("dfqual i<24 N={}".format(dfqual.count()))
+print("#nans={}".format(num_nans(dfqual)))
 
+Nexp=40*10**(-0.36)
+print("exp number={}/sq-arcmin tot={}".format(Nexp,Nexp*A*3600))
+
+#histos blendedness,snr
+print("dfqual i<24 SNR>10 N={}".format( dfqual.filter(df.snr_i_cModel>10).count()))
