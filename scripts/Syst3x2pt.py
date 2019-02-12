@@ -54,7 +54,9 @@ timer=Timer()
 
 
 timer.start()
-df_all=spark.read.parquet("/global/cscratch1/sd/plaszczy/Run1.2p/object_catalog/full_catalog.parquet")
+#df_all=spark.read.parquet("/global/cscratch1/sd/plaszczy/Run1.2p/object_catalog/full_catalog.parquet")
+df_all=spark.read.parquet("/global/projecta/projectdirs/lsst/global/in2p3/Run1.2p/object_catalog/dpdd_object_run1.2p.parquet")
+
 df_all.printSchema()
 timer.stop()
 
@@ -65,7 +67,7 @@ timer.stop()
 
 
 # build selection by appending to string
-cols=["ra","dec","good","clean","extendedness","blendedness","mag_i_cModel","magerr_i_cModel","snr_i_cModel",      "psf_fwhm_i","Ixx_i","Iyy_i","Ixy_i","IxxPSF_i","IyyPSF_i","IxyPSF_i"]
+cols=["ra","dec","good","clean","extendedness","blendedness","mag_i_cModel","magerr_i_cModel","snr_i_cModel","psf_fwhm_i","Ixx_i","Iyy_i","Ixy_i","IxxPSF_i","IyyPSF_i","IxyPSF_i"]
 print(cols)
 #use these columns
 df=df_all.select(cols)
@@ -121,13 +123,15 @@ timer.stop()
 timer.start()
 #groupby indices and count the number of elements in each group
 df_map=df.groupBy("ipix").count()
+area=hp.nside2pixarea(nside, degrees=True)*3600
+df_map=df_map.withColumn("dens",df_map['count']/area).drop("count")
 #statistics per pixel
-df_map.describe(['count']).show() 
+df_map.describe(['dens']).show() 
 #back to python world
 map_p=df_map.toPandas()
 #now data is reduced create the healpy map
 map_c = np.zeros(hp.nside2npix(nside))
-map_c[map_p['ipix'].values]=map_p['count'].values
+map_c[map_p['ipix'].values]=map_p['dens'].values
 #map_c[map_c==0]=hp.UNSEEN
 timer.stop()
 
