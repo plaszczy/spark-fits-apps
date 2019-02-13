@@ -116,6 +116,12 @@ for c in df.columns:
     N_nans=num_nans(df,c)
     print("#Nans in {}={}M ({:2.1f}%)".format(c,N_nans/1e6,float(N_nans/N)*100))
 
+#density map
+dens_map=projmap(dfqual)
+#plot
+hp.gnomview(dens_map,rot=[55,-29.8],reso=reso,min=0,max=30,title=r"good density/$arcmin^2$")
+plt.show()
+
 ######
 #with i band information
 print("GALs with i band")
