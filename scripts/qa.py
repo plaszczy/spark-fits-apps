@@ -1,8 +1,43 @@
 import os,sys
 sys.path.insert(0,os.path.join(os.getcwd(),".."))
 from df_tools import *
+import pandas as pd
+import numpy as np
+import healpy as hp
+
+import matplotlib.pyplot as plt
+plt.set_cmap('jet')
 
 from pyspark.sql import SparkSession
+from pyspark.sql.functions import pandas_udf, PandasUDFType
+
+nside=2048
+area=hp.nside2pixarea(nside, degrees=True)*3600
+resol= hp.nside2resol(nside,arcmin=True)
+#create the ang2pix user-defined-function. 
+#we use pandas_udf because they are more efficient
+@pandas_udf('int', PandasUDFType.SCALAR)
+def Ang2Pix(ra,dec):
+    return pd.Series(hp.ang2pix(nside,np.radians(90-dec),np.radians(ra)))
+
+
+
+def projmap(df):
+    df_map=df.groupBy("ipix").count()
+    df_map=df_map.withColumn("dens",df_map['count']/area).drop("count")
+    #statistics per pixel
+    df_map.describe(['dens']).show() 
+    #df_histplot(df_map,"dens",doStat=True)
+    #back to python world
+    map_p=df_map.toPandas()
+    A=map_p.index.size*area/3600
+    print("map area={} deg2".format(A))
+    #now data is reduced create the healpy map
+    map_c = np.full(hp.nside2npix(nside),hp.UNSEEN)
+    map_c[map_p['ipix'].values]=map_p['dens'].values
+    return map_c
+
+
 
 # Initialise our Spark session
 spark = SparkSession.builder.getOrCreate()
@@ -36,28 +71,11 @@ timer.stop()
 
 
 # build selection by appending to string
-cols=["tract","patch","ra","dec","good","clean","extendedness","blendedness","psFlux_flag_i","psFlux_i","mag_i","mag_i_cModel","snr_i_cModel"]
+cols=["tract","patch","ra","dec","good","clean","extendedness","blendedness","mag_i_cModel","snr_i_cModel"]
 print(cols)
 #use these columns
 df=df_all.select(cols)
 
-
-# Apply some quality cuts
-#df=df.filter( (df.good==True)&(df.clean==True)&(df.extendedness>0.9)&(df.blendedness < 10**(-0.375))&(df.mag_i_cModel< 24.5)&(df.snr_i_cModel>10))
-
-
-# Add a column of healpixels (mapReduce way)
-import pandas as pd
-import numpy as np
-import healpy as hp
-from pyspark.sql.functions import pandas_udf, PandasUDFType
-
-nside=2048
-#create the ang2pix user-defined-function. 
-#we use pandas_udf because they are more efficient
-@pandas_udf('int', PandasUDFType.SCALAR)
-def Ang2Pix(ra,dec):
-    return pd.Series(hp.ang2pix(nside,np.radians(90-dec),np.radians(ra)))
 
 #add a column of healpix indices
 df=df.withColumn("ipix",Ang2Pix("ra","dec"))
@@ -89,38 +107,41 @@ for v in vals:
       df.select(v).groupby(v).count().show(5)
 
 
-timer.start()
-#groupby indices and count the number of elements in each group
-df_map=df.groupBy("ipix").count()
-area=hp.nside2pixarea(nside, degrees=True)*3600
-df_map=df_map.withColumn("dens",df_map['count']/area).drop("count")
-#statistics per pixel
-df_map.describe(['dens']).show() 
-#back to python world
-map_p=df_map.toPandas()
-#now data is reduced create the healpy map
-map_c = np.full(hp.nside2npix(nside),hp.UNSEEN)
-map_c[map_p['ipix'].values]=map_p['dens'].values
-timer.stop()
-
-A=map_p.index.size*area/3600
-print("map area={} deg2".format(map_p.index.size*area/3600))
+dens_map=projmap(df)
+A=np.sum(dens_map!=hp.UNSEEN)*area/3600
+print("map area={} deg2".format(A))
 #plot
-
-import matplotlib.pyplot as plt
-plt.set_cmap('jet')
-resol= hp.nside2resol(nside,arcmin=True)
-hp.gnomview(map_c,rot=[55,-29.8],reso=resol,xsize=200,min=200,max=300)
-plt.savefig("newrun.png")
+hp.gnomview(dens_map,rot=[55,-29.8],reso=resol,min=100,max=400)
+plt.show()
+#plt.savefig("newrun.png")
 
 ####
 #qual
-dfqual=df.filter((df.mag_i_cModel<24) & (df.good==True) & (df.clean==True) &(df.extendedness>0.9)) 
-print("dfqual i<24 N={}".format(dfqual.count()))
+dfqual=df.filter((df.good==True) & (df.clean==True) &(df.extendedness>0.9)) 
+Nqual=dfqual.count()
+print("dfqual N={} tot_frac={}".format(Nqual,Nqual/N))
 print("#nans={}".format(num_nans(dfqual)))
+
+
+print("qual stat:")
+for c in df.columns:
+    N_nans=Nqual-dfqual.select(c).na.drop().count()
+    print("{}: NANs={}M ({:2.1f}%)".format(c,N_nans/1e6,float(N_nans/Nqual)*100))
+
+#with i band information
+dfqual_i=dfqual.select("ra","dec","mag_i_cModel","snr_i_cModel","ipix").na.drop()
+Nqual_i=dfqual_i.count()
+print("dfqual N={} tot_frac={}".format(Nqual_i,Nqual_i/Nqual))
+print("#nans={}".format(num_nans(dfqual_i)))
+
+
+#i<24
+df24=dfqual_i.filter(dfqual_i['mag_i_cModel']<24)
+df_map=df24.groupBy("ipix").count()
+df_map=df_map.withColumn("dens",df_map['count']/area).drop("count")
+print("density for i<24")
+df_map.describe().show()
+
 
 Nexp=40*10**(-0.36)
 print("exp number={}/sq-arcmin tot={}".format(Nexp,Nexp*A*3600))
-
-#histos blendedness,snr
-print("dfqual i<24 SNR>10 N={}".format( dfqual.filter(df.snr_i_cModel>10).count()))

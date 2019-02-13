@@ -14,10 +14,11 @@ def num_nans(df,col=None):
     if col==None:
         return df.count()-df.na.drop().count()
     else:
-        return df.filter(df[col].contains(np.nan)).count()
+        #return df.filter(df[col].contains(np.nan)).count()
+        return df.count()-df.select(col).na.drop().count()
 
 
-def df_hist(df,col,Nbins,bounds=None):
+def df_hist(df,col,Nbins=50,bounds=None):
     if (bounds==None) :
         m=minmax(df,col)
         zmin=m[0]
@@ -33,14 +34,25 @@ def df_hist(df,col,Nbins,bounds=None):
     return h.select("bin",(zmin+dz/2+h['bin']*dz).alias('loc'),"count").drop("bin"),dz,(zmin,zmax)
 
 
-def df_histplot(df,col,Nbins=50,bounds=None):    
+def df_histplot(df,col,Nbins=50,bounds=None,doStat=False):    
     result=df_hist(df,col,Nbins,bounds)
     hp=result[0].toPandas()
     step=result[1]
     plt.bar(hp['loc'].values,hp['count'].values,step,color='white',edgecolor='black')
     plt.xlabel(col)
+    if doStat:
+        s=df.describe([col])
+        s.show()
+        r=s.select(col).take(6)
+        N=int(r[0][0])
+        mu=float(r[1][0])
+        sig=float(r[2][0])
+        min_=float(r[3][0])
+        max_=float(r[4][0])
+        stat=[r"$N={:g}$".format(N),r"$\mu={:g}$".format(mu),r"$\sigma={:g}$".format(sig),"min={:g}".format(min_),"max={:g}".format(max_)]
+        ax=plt.gca()
+        plt.text(0.8,0.7,"\n".join(stat), horizontalalignment='center',transform=ax.transAxes)
     plt.show()
-    return hp
 
 def df_histplot2(df,col1,col2,Nbin1=50,Nbin2=50,bounds=None):
     if (bounds==None) :
