@@ -13,7 +13,7 @@ plt.set_cmap('jet')
 
 
 nside=2048
-pixarea=hp.nside2pixpixarea(nside, degrees=True)*3600
+pixarea=hp.nside2pixarea(nside, degrees=True)*3600
 reso= hp.nside2resol(nside,arcmin=True)
 #create the ang2pix user-defined-function. 
 #we use pandas_udf because they are more efficient
@@ -31,7 +31,7 @@ def projmap(df):
     #back to python world
     map_p=df_map.toPandas()
     A=map_p.index.size*pixarea/3600
-    print("map pixarea={} deg2".format(A))
+    print("map area={} deg2".format(A))
     #now data is reduced create the healpy map
     map_c = np.full(hp.nside2npix(nside),hp.UNSEEN)
     map_c[map_p['ipix'].values]=map_p['dens'].values
@@ -100,26 +100,28 @@ df.groupBy(["tract","patch"]).count().groupBy("tract").count().\
 withColumnRenamed("count","#patches").sort("tract").show() 
 
 #density map
+print("density map")
 dens_map=projmap(df)
 #plot
-hp.gnomview(dens_map,rot=[55,-29.8],reso=reso,min=100,max=400,title=r"density/$arcmin^2$")
+hp.gnomview(dens_map,rot=[55,-29.8],reso=reso,min=100,max=400,title=r"$density/arcmin^2$")
 plt.show()
 #plt.savefig("newrun.png")
 
 ####
 #qual
-print("GALs good)
+print("GALs good")
 dfqual=df.filter((df.good==True) & (df.clean==True) &(df.extendedness>0.9)) 
 Nqual=dfqual.count()
-print("#good={} ({2.1f}% raw)".format(Nqual,Nqual/N*100))
-for c in df.columns:
-    N_nans=num_nans(df,c)
-    print("#Nans in {}={}M ({:2.1f}%)".format(c,N_nans/1e6,float(N_nans/N)*100))
+print("#good={}M {:2.1f}% raw".format(Nqual/1e6,Nqual/N*100))
+for c in ['mag_i_cModel','blendedness']:
+    N_nans=num_nans(dfqual,c)
+    print("#Nans in {} ={}M ({:2.1f}%)".format(c,N_nans/1e6,float(N_nans/N)*100))
 
 #density map
+print("density map")
 dens_map=projmap(dfqual)
 #plot
-hp.gnomview(dens_map,rot=[55,-29.8],reso=reso,min=0,max=30,title=r"good density/$arcmin^2$")
+hp.gnomview(dens_map,rot=[55,-29.8],reso=reso,min=0,max=300,title=r"good: $density/arcmin^2$")
 plt.show()
 
 ######
@@ -127,18 +129,34 @@ plt.show()
 print("GALs with i band")
 dfqual_i=dfqual.select("ra","dec","mag_i_cModel","ipix").na.drop()
 Nqual_i=dfqual_i.count()
-print("GAL_i N={}M tot_frac={}".format(Nqual_i))
-print("#nans={}M".format(num_nans(dfqual_i)/1e6)
+print("GALs with i band= {}M".format(Nqual_i/1e6))
+#histo
+df_histplot(dfqual_i,'mag_i_cModel',doStat=True)
+plt.show()
+
+dens_map=projmap(dfqual_i)
+
+hp.gnomview(dens_map,rot=[55,-29.8],reso=reso,min=0,max=200,title=r"good +i: $density/arcmin^2$")
+plt.show()
 
 #######
 #i<24
 print("GALs i <24")
 df24=dfqual_i.filter(dfqual_i['mag_i_cModel']<24)
-df_map=df24.groupBy("ipix").count()
-print("#gals i<24".format(df24.count())
-df_map=df_map.withColumn("dens",df_map['count']/pixarea).drop("count")
-df_map.describe(['dens']).show()
+print("#gals i<24 ={}M".format(df24.count()/1e6))
 
-A=np.sum(dens_map!=hp.UNSEEN)*pixarea/3600
+dens_map=projmap(df24)
+
+dens_map[dens_map==0]=hp.UNSEEN
+A=np.sum(dens_map!=hp.UNSEEN)*pixarea
 Nexp=40*10**(-0.36)
-print("exp number={}/sq-arcmin tot={}".format(Nexp,Nexp*A*3600))
+print("exp number={}/sq-arcmin tot={}".format(Nexp,Nexp*A))
+
+w=(dens_map!=hp.UNSEEN)
+plt.hist(dens_map[w],range=(0,20))
+plt.xlabel("density i<24")
+plt.axvline(Nexp)
+plt.show()
+
+hp.gnomview(dens_map,rot=[55,-29.8],reso=reso,min=0,max=20,title=r"i<24 $density/arcmin^2$")
+plt.show()
