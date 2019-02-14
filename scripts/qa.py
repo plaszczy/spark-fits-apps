@@ -64,6 +64,7 @@ timer=Timer()
 
 # input
 ff="/global/projecta/projectdirs/lsst/global/in2p3/Run1.2p/object_catalog/dpdd_object_run1.2p.parquet"
+#ff="/global/projecta/projectdirs/lsst/global/in2p3/Run1.2p/object_catalog_v4/dpdd_object_run1.2p.parquet"
 print("reading {}".format(ff))
 timer.start()
 df_all=spark.read.parquet(ff)
@@ -103,7 +104,7 @@ withColumnRenamed("count","#patches").sort("tract").show()
 print("density map")
 dens_map=projmap(df)
 #plot
-hp.gnomview(dens_map,rot=[55,-29.8],reso=reso,min=100,max=400,title=r"$density/arcmin^2$")
+hp.gnomview(dens_map,rot=[55,-29.8],reso=reso,min=100,max=400,title=r"all $density/arcmin^2$")
 plt.show()
 #plt.savefig("newrun.png")
 
