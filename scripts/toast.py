@@ -11,6 +11,16 @@ import healpy as hp
 import matplotlib.pyplot as plt
 plt.set_cmap('jet')
 
+dc2_run1x_center=[55.064,-29.783]
+dc2_run1x_region = [[57.87, -27.25], [52.25, -27.25], [52.11, -32.25], [58.02, -32.25]]
+
+dc2_udf_center=[53.125,-28.100]
+dc2_udf_region=[[53.764,-27.533],[52.486,-27.533],[52.479,-28.667],[53.771,-28.667]]
+
+
+#DATA
+ff="/global/projecta/projectdirs/lsst/global/in2p3/Run1.2p/object_catalog_v4/dpdd_dc2_object_run1.2p.parquet"
+
 
 nside=2048
 pixarea=hp.nside2pixarea(nside, degrees=True)*3600
@@ -75,8 +85,6 @@ def tracts_outline2(df):
     pix = df_repart.rdd.mapPartitions(get_borders_from_ipix).collect()
     return pix
 
-
-
 def projmap(df,col,minmax=None):
     df_map=df.select(col,"ipix").na.drop().groupBy("ipix").avg(col)
     #statistics per pixel
@@ -132,15 +140,14 @@ spark = SparkSession.builder.getOrCreate()
 print("spark session started")
 
 
-# input
-ff="/global/projecta/projectdirs/lsst/global/in2p3/Run1.2p/object_catalog_v4/dpdd_object_run1.2p.parquet"
+
 print("reading {}".format(ff))
 df_all=spark.read.parquet(ff)
 
 
 cols="tract,ra,dec,good,clean"
 for b in ['u','i']:
-    s=",mag_{0}_cModel,snr_{0}_cModel".format(b)
+    s=",psFlux_flag_{0},psFlux_{0},psFluxErr_{0},mag_{0}_cModel,magerr_{0}_cModel,snr_{0}_cModel".format(b)
     cols+=s
 print(cols)
 
@@ -154,9 +161,12 @@ df=df.filter((df.good==True) & (df.clean==True) )
 df=df.withColumn("ipix",Ang2Pix("ra","dec"))
 
 #dont need these anymore
-df=df.drop("ra","dec","good","clean","extendedness")
+df=df.drop("good","clean","extendedness")
 
 print("caching...")
 print(df.columns)
 df=df.cache()
 print("N={}M".format(df.count()/1e6))
+
+uddf=df.filter(df.ra.between(52.48,53.77)&df.dec.between(-28.66,-27.53))
+print("sq uDDF N={}M".format(uddf.count()/1e6))

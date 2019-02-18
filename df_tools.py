@@ -17,8 +17,19 @@ def num_nans(df,col=None):
         #return df.filter(df[col].contains(np.nan)).count()
         return df.count()-df.select(col).na.drop().count()
 
+def frac_nans(df,col=None):
+    N=df.count()
+    if col==None:
+        return 1.-df.na.drop().count()/N
+    else:
+        #return df.filter(df[col].contains(np.nan)).count()
+        return 1.-df.select(col).na.drop().count()/N
 
 def df_hist(df,col,Nbins=50,bounds=None):
+
+#drop nans if any
+    df=df.select(col,"ipix").na.drop()
+
     if (bounds==None) :
         m=minmax(df,col)
         zmin=m[0]

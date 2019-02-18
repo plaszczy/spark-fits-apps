@@ -11,6 +11,13 @@ import healpy as hp
 import matplotlib.pyplot as plt
 plt.set_cmap('jet')
 
+dc2_run1x_center=[55.064,-29.783]
+dc2_run1x_region = [[57.87, -27.25], [52.25, -27.25], [52.11, -32.25], [58.02, -32.25]]
+
+dc2_udf_center=[53.125,-28.100]
+dc2_udf_region=[[53.764,-27.533],[52.486,-27.533],[52.479,-28.667],[53.771,-28.667]]
+
+
 
 nside=2048
 pixarea=hp.nside2pixarea(nside, degrees=True)*3600
@@ -63,8 +70,7 @@ timer=Timer()
 
 
 # input
-ff="/global/projecta/projectdirs/lsst/global/in2p3/Run1.2p/object_catalog/dpdd_object_run1.2p.parquet"
-#ff="/global/projecta/projectdirs/lsst/global/in2p3/Run1.2p/object_catalog_v4/dpdd_object_run1.2p.parquet"
+ff="/global/projecta/projectdirs/lsst/global/in2p3/Run1.2p/object_catalog_v4/dpdd_dc2_object_run1.2p.parquet"
 print("reading {}".format(ff))
 timer.start()
 df_all=spark.read.parquet(ff)
