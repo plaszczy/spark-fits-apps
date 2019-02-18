@@ -6,6 +6,7 @@ from pyspark.sql.functions import randn
 from pyspark.sql.types import IntegerType,FloatType
 from pyspark.sql.functions import pandas_udf, PandasUDFType
 
+import os
 import pandas as pd
 import numpy as np
 import healpy as hp
@@ -31,25 +32,16 @@ class Timer:
 
 
 def benchmark(gal,z1,z2):
-    
-    shell=gal.filter(gal['zrec'].between(z1,z2))
-    print("N in shell={}".format(shell.count()))
-    nside=512
-    @pandas_udf('int', PandasUDFType.SCALAR)
-    def Ang2Pix(ra,dec):
-        return pd.Series(hp.ang2pix(nside,np.radians(90-dec),np.radians(ra)))
-    map=shell.select(Ang2Pix("RA","Dec").alias("ipix")).groupBy("ipix").count().toPandas()
-    #back to python world
-    myMap = np.zeros(12 * nside**2)
-    myMap[map['ipix'].values]=map['count'].values
+ 
     return myMap
 
 ###############
-
+nside=512
+@pandas_udf('int', PandasUDFType.SCALAR)
+def Ang2Pix(ra,dec):
+        return pd.Series(hp.ang2pix(nside,np.radians(90-dec),np.radians(ra)))
 
 #main
-import os
-ff=os.environ.get("fitsdir","file:///home/plaszczy/fits/galbench_srcs_s1_0.fits")
 
 spark = SparkSession.builder.getOrCreate()
 sc=spark.sparkContext
@@ -62,10 +54,16 @@ logger.LogManager.getLogger("akka").setLevel(level)
 
 timer=Timer()
 
-#zbins
-gal=spark.read.format("fits").option("hdu",1)\
-     .load(ff)\
-     .select(F.col("RA"), F.col("Dec"), (F.col("Z_COSMO")+F.col("DZ_RSD")).alias("z"))
+#FITS
+#gal=spark.read.format("fits").option("hdu",1)\
+#     .load(os.environ['FITSDIR'])\
+#     .select(F.col("RA"), F.col("Dec"), (F.col("Z_COSMO")+F.col("DZ_RSD")).alias("z"))
+
+#PKT   
+PARQUET="hdfs://134.158.75.222:8020/user/julien.peloton/LSST10Y_shuffled_uncomp"
+gal=spark.read.parquet(PARQUET)\
+	.select(F.col("RA"), F.col("DEC").alias("Dec"), (F.col("Z_COSMO")+F.col("DZ_RSD")).alias("z"))
+      
 gal.printSchema()
 timer.step()
 timer.print("load")
@@ -74,8 +72,9 @@ gal=gal.withColumn("zrec",(gal.z+0.03*(1+gal.z)*randn()).astype('float'))
 gal.show(5)
 timer.step()
 timer.print("show")
-####
-print("N={}".format(gal.cache().count()))
+##cache
+gal=gal.cache()
+print("N={}".format(gal.count()))
 timer.step()
 timer.print("data loaded")
 ####
@@ -86,14 +85,22 @@ zshell=[0.0,0.13,0.27,0.43,0.63,0.82,1.05,1.32,1.61,1.95,2.32]
 #writemap
 write=False
 dt=[]
-for i in range(len(zshell)-1):
-    z1=zshell[i]
-    z2=zshell[i+1]
-    map=benchmark(gal,z1,z2)
+
+for z1,z2 in zip(zshell[0:-1],np.roll(zshell,-1)):
+    #filter
+    shell=gal.filter(gal['zrec'].between(z1,z2))
+    print("shell=[{},{}] #={}".format(z1,z2,shell.count()))
+    #add pixnumber
+    shell=shell.withColumn("ipix",Ang2Pix("RA","Dec").alias("ipix"))
+    #histogram
+    p_map=shell.select("ipix").groupBy("ipix").count().toPandas()
+    myMap = np.zeros(12 * nside**2)
+    myMap[p_map['ipix'].values]=p_map['count'].values
     dt.append(timer.step())
     timer.print("shell=[{},{}]".format(z1,z2))
     if write:
         hp.write_map("map{}.fits".format(i), map)
+
 ddt=np.array(dt)
 with open("tomo_python.txt", 'ab') as abc:
     np.savetxt(abc, ddt.reshape(1,ddt.shape[0]))

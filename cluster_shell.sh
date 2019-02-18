@@ -44,12 +44,12 @@ echo "mem used= ${total_mem} GB"
 echo "mem for cache $(echo $n_executors*$executor_mem*0.6|bc) GB"
 
 #LOCAL
-master="--master spark://134.158.75.222:7077 "
-opts=" $master --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g "
+#master="--master spark://134.158.75.222:7077 "
+#opts=" $master --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g "
 
 #YARN
-#master="--master yarn "
-#opts=" $master --driver-memory ${driver_mem}g --num-executors ${n_executors} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g "
+master="--master yarn "
+opts=" $master --driver-memory ${driver_mem}g --num-executors ${n_executors} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g "
 
 #
 SF="/spark_mongo_tmp/stephane.plaszczynski/spark-fits-apps/lib/spark-fits_2.11-0.6.0.jar"

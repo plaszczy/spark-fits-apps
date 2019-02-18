@@ -37,52 +37,30 @@ def benchmark(ff):
     ddt=[]
     
     ana="1: load(HDU)"
+
     gal=spark.read.format("fits").option("hdu",1)\
          .load(ff)\
          .select(F.col("RA"), F.col("Dec"), (F.col("Z_COSMO")+F.col("DZ_RSD")).alias("z"))
-    #     .cache()
-    #     .persist(StorageLevel.MEMORY_ONLY_SER)
+
     
+    #PARQUET="hdfs://134.158.75.222:8020/user/julien.peloton/LSST10Y_shuffled_uncomp"
+    #gal=spark.read.parquet(PARQUET)\
+    #  .select(F.col("RA"), F.col("DEC").alias("Dec"), (F.col("Z_COSMO")+F.col("DZ_RSD")).alias("z"))
+
+
     gal.printSchema()
     ddt.append(timer.step())
     timer.print(ana)
     #######
-    #ana="2: gauss PZ + show(5)"
-    #gal=gal.withColumn("zrec",(gal.z+0.03*(1+gal.z)*F.randn()).astype('float'))
-    #only randoms
-    #gal.show(5)
-    #ddt.append(timer.step())
-    #timer.print(ana)
-
-    ana="2b: PZ full + show(5)"
-    trans=np.loadtxt('scripts/cum_inv.txt')
-
-    @pandas_udf('float', PandasUDFType.SCALAR)
-    def get_zrec(z,u):
-        zmin=0.
-        zmax=3.
-        Nz=301
-        step_z=(zmax-zmin)/Nz
-        iz=np.array((z-zmin-step_z/2)/step_z,dtype='int')
-        
-        umin=0.
-        umax=1.
-        Nu=100
-        step_u=(umax-umin)/Nu
-        iu=np.array((u-umin-step_u/2)/step_u,dtype='int') 
-    
-        return pd.Series(trans[iz,iu])
-
-    #column of uniform randoms
-    gal=gal.withColumn("u",F.rand().astype('float'))
-    gal=gal.withColumn("zrec",get_zrec("z","u")).drop("u")
+    ana="2: gauss PZ + show(5)"
+    gal=gal.withColumn("zrec",(gal.z+0.03*(1+gal.z)*F.randn()).astype('float'))
     gal.show(5)
     ddt.append(timer.step())
     timer.print(ana)
 
     ####
     ana="3: cache (count)"
-    gal=gal.cache()
+    gal=gal.cache()#.persist(StorageLevel.MEMORY_ONLY_SER)
     print("N={}".format(gal.count()))
     ddt.append(timer.step())
     timer.print(ana)
@@ -130,26 +108,14 @@ def benchmark(ff):
     #timer.print(ana)
     #p5.to_csv("prec5.csv")
 
-    ana="8a: histo (UDF)"
-    binNumber_udf=F.udf(lambda z: int((z-zmin)/dz))
-    #from pyspark.sql import SQLContext
-    #sqlContext = SQLContext.getOrCreate(sc)
-    #binNumber=sqlContext.udf.register("binNumber",lambda z: int((z-zmin)/dz))
-    #std python func
-    #def binNumber(z):
-    #    return int((z-zmin)/dz)
-    #turn to udf
-    #binNumber_udf=F.udf(lambda x: binNumber(x))
-
-    #NOK on previous versions
-    #binNumber_udf=spark.udf.register("binNumber",binNumber,IntegerType())
-    p_udf=gal.select(gal.z,binNumber_udf(gal.z).alias('bin')).groupBy("bin").count().orderBy(F.asc("bin")).toPandas()
-    ddt.append(timer.step())
-    timer.print(ana)
+    #ana="8a: histo (UDF)"
+    #binNumber_udf=F.udf(lambda z: int((z-zmin)/dz))
+    #p_udf=gal.select(gal.z,binNumber_udf(gal.z).alias('bin')).groupBy("bin").count().orderBy(F.asc("bin")).toPandas()
+    #ddt.append(timer.step())
+    #timer.print(ana)
 
     
     ana="8b: histo (pandas UDF)"
-
     @pandas_udf("float", PandasUDFType.SCALAR)
     def binFloat(z):
         return pd.Series((z-zmin)/dz)
