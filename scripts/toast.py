@@ -1,5 +1,6 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import pandas_udf, PandasUDFType
+from pyspark import StorageLevel
 
 import os,sys
 sys.path.insert(0,os.path.join(os.getcwd(),".."))
@@ -19,8 +20,12 @@ dc2_udf_region=[[53.764,-27.533],[52.486,-27.533],[52.479,-28.667],[53.771,-28.6
 
 
 #DATA
-ff="/global/projecta/projectdirs/lsst/global/in2p3/Run1.2p/object_catalog_v4/dpdd_dc2_object_run1.2p.parquet"
+#ff="/global/projecta/projectdirs/lsst/global/in2p3/Run1.2p/object_catalog_v4/dpdd_dc2_object_run1.2p.parquet"
+#ff="/lsst/Run1.2/dpdd_dc2_object_run1.2p_v4.parquet"
 
+ff=os.environ['RUN12P']
+if 'MASTER' in os.environ.keys():
+    ff=os.environ['MASTER']+'/'+ff
 
 nside=2048
 pixarea=hp.nside2pixarea(nside, degrees=True)*3600
@@ -166,6 +171,7 @@ df=df.drop("good","clean","extendedness")
 print("caching...")
 print(df.columns)
 df=df.cache()
+#df=df.persist(StorageLevel.MEMORY_ONLY_SER)
 print("N={}M".format(df.count()/1e6))
 
 uddf=df.filter(df.ra.between(52.48,53.77)&df.dec.between(-28.66,-27.53))

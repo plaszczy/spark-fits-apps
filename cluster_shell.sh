@@ -29,7 +29,6 @@ echo "runinng on  ${n_executors} executors"
 #cluster: 1 machine(executor= 18 cores de 2 GB=36GB)
 
 
-
 executor_cores=17
 executor_mem=29
 driver_mem=4
@@ -44,13 +43,17 @@ echo "mem used= ${total_mem} GB"
 echo "mem for cache $(echo $n_executors*$executor_mem*0.6|bc) GB"
 
 #LOCAL
-#master="--master spark://134.158.75.222:7077 "
-#opts=" $master --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g "
 
+if [ -z "$MASTER" ] ; then
 #YARN
+echo "YARN execution"
 master="--master yarn "
 opts=" $master --driver-memory ${driver_mem}g --num-executors ${n_executors} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g "
-
+else
+echo "local[*] execution"
+master="--master spark://134.158.75.222:7077 "
+opts=" $master --driver-memory ${driver_mem}g --total-executor-cores ${ncores_tot} --executor-cores ${executor_cores} --executor-memory ${executor_mem}g "
+fi
 #
 SF="/spark_mongo_tmp/stephane.plaszczynski/spark-fits-apps/lib/spark-fits_2.11-0.6.0.jar"
 
@@ -58,7 +61,6 @@ SF="/spark_mongo_tmp/stephane.plaszczynski/spark-fits-apps/lib/spark-fits_2.11-0
 cmd="$1 $opts --jars $SF"
 
 export PYSPARK_DRIVER_PYTHON=ipython
-export FITSDIR=$LSST10Y
 
 #jup
 if [ $nargs -eq 3 ]; then 
