@@ -150,7 +150,7 @@ print("reading {}".format(ff))
 df_all=spark.read.parquet(ff)
 
 
-cols="tract,ra,dec,good,clean"
+cols="tract,ra,dec,good,clean,extendedness"
 for b in ['u','i']:
     s=",psFlux_flag_{0},psFlux_{0},psFluxErr_{0},mag_{0}_cModel,magerr_{0}_cModel,snr_{0}_cModel".format(b)
     cols+=s
@@ -160,7 +160,7 @@ print(cols)
 df=df_all.select(cols.split(','))
 
 #qual
-df=df.filter((df.good==True) & (df.clean==True) ) 
+df=df.filter((df.good==True) & (df.clean==True)&(df.extendedness==1)) 
 
 #add a column of healpix indices
 df=df.withColumn("ipix",Ang2Pix("ra","dec"))
@@ -176,3 +176,7 @@ print("N={}M".format(df.count()/1e6))
 
 uddf=df.filter(df.ra.between(52.48,53.77)&df.dec.between(-28.66,-27.53))
 print("sq uDDF N={}M".format(uddf.count()/1e6))
+
+print(df.columns)
+
+#cut stars: (df.psFluxErr_i<3))
