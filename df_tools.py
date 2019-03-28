@@ -28,7 +28,7 @@ def frac_nans(df,col=None):
 def df_hist(df,col,Nbins=50,bounds=None):
 
 #drop nans if any
-    df=df.select(col,"ipix").na.drop()
+    df=df.select(col).na.drop()
 
     if (bounds==None) :
         m=minmax(df,col)

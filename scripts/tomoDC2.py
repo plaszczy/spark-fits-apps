@@ -27,7 +27,8 @@ def Ang2Pix(ra,dec):
         return pd.Series(hp.ang2pix(nside,np.radians(90-dec),np.radians(ra)))
 
 #data source
-ff=os.path.join(os.environ['COSMODC2'],"xyz_v1.1.4.parquet")
+#ff=os.path.join(os.environ['COSMODC2'],"xyz_v1.1.4.parquet")
+ff=os.environ['COSMODC2']
 print("input={}".format(ff))
 gal=spark.read.parquet(ff)
 gal.printSchema()
@@ -47,7 +48,7 @@ zshell=np.linspace(0,3,16)
 
 
 #writemap
-write=True
+write=False
 for i in range(len(zshell)-1):
     z1=zshell[i]
     z2=zshell[i+1]
