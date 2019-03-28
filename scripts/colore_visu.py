@@ -23,31 +23,35 @@ from df_tools import *
 
 
 #cosmology LCDM-flat
-c=constants.c/1000.
+c_speed=constants.c/1000.
 
 H0=68.
 Omega_M=0.306324
 
+def integrand(z):
+    return c_speed/H0/np.sqrt(Omega_M*(1+z)**3+(1-Omega_M))
 
-def chi(z0):
-    return integrate.quad(lambda z: c/H0/np.sqrt(Omega_M*(1+z)**3+(1-Omega_M)), 0.,z0)[0]
+def chi(z):
+    return integrate.quad(integrand, 0.,z)[0]
 
-vec_chi=np.vectorize(chi)
+chi_vec=np.vectorize(chi)
 
 #main#########################################
 parser = argparse.ArgumentParser(description='3D plot of galactic data')
     
 parser.add_argument( "-v", help="increase verbosity",dest='verbose',action="store_true")
 
+parser.add_argument('-zname', dest='zname',help='Name of the redshift column',default="Z_COSMO")
 parser.add_argument('-zmin', dest='zmin',type=float,help='Min redshift to cut',default=0.)
 parser.add_argument('-zmax', dest='zmax',type=float,help='Max redshift to cut',default=0.1)
 
+parser.add_argument('-raname', dest='raname',help='Name of the RA column',default="RA")
 parser.add_argument('-ramin', dest='ramin',type=float,help='Min RA to cut',default=0.0)
 parser.add_argument('-ramax', dest='ramax',type=float,help='Max RA to cut',default=360.)
 
-parser.add_argument('-decmin', dest='decmin',type=float,help='Min RA to cut',default=-90.)
-parser.add_argument('-decmax', dest='decmax',type=float,help='Max RA to cut',default=90.)
-
+parser.add_argument('-decname', dest='decname',help='Name of the DEC column',default="Dec")
+parser.add_argument('-decmin', dest='decmin',type=float,help='Min DEC to cut',default=-90.)
+parser.add_argument('-decmax', dest='decmax',type=float,help='Max DEC to cut',default=90.)
 
 args = parser.parse_args(None)
 
@@ -71,7 +75,7 @@ timer=Timer()
 timer.start("loading")   
 gal=spark.read.format("fits").option("hdu",1)\
   .load(ff)\
-  .select(F.col("RA"), F.col("Dec"), (F.col("Z_COSMO")+F.col("DZ_RSD")).alias("z"))
+  .select(F.col(args.raname).alias("RA"), F.col(args.decname).alias("Dec"), F.col(args.zname).alias("z"))
 gal.printSchema()
 timer.stop()
 
@@ -121,7 +125,8 @@ Nz=1000
 zmax=3.
 dz=zmax/(Nz-1)
 ZZ=np.linspace(0,3,Nz)
-CHI=vec_chi(ZZ)
+CHI=chi_vec(ZZ)
+#linear interp
 @pandas_udf('float', PandasUDFType.SCALAR)
 def dist_udf(z):
     i=np.array(z/dz,dtype='int')
