@@ -21,6 +21,9 @@ sys.path.insert(0,os.path.join(os.getcwd(),".."))
 from Timer import *
 from df_tools import *
 
+#INEXLIB
+import inlib
+import window
 
 #cosmology LCDM-flat
 c_speed=constants.c/1000.
@@ -75,13 +78,13 @@ timer=Timer()
 timer.start("loading")   
 gal=spark.read.format("fits").option("hdu",1)\
   .load(ff)\
-  .select(F.col(args.raname).alias("RA"), F.col(args.decname).alias("Dec"), F.col(args.zname).alias("z"))
+  .select(F.col(args.raname).alias("RA"), F.col(args.decname).alias("Dec"), F.col(args.zname).alias("redshift"))
 gal.printSchema()
 timer.stop()
 
 
 #filters
-gal=gal.filter((gal.z>args.zmin)& (gal.z<args.zmax)) 
+gal=gal.filter((gal.redshift>args.zmin)& (gal.redshift<args.zmax)) 
 
 if args.ramin>0:
     gal=gal.filter(gal["RA"]>args.ramin) 
@@ -109,8 +112,6 @@ if Ngal>1e6:
         print("exiting")
         sys.exit()
 
-df_histplot(gal,"z")
-
 
 #XYZ transform
 #theta/phi is better than ra/dec
@@ -132,7 +133,7 @@ def dist_udf(z):
     i=np.array(z/dz,dtype='int')
     return pd.Series((CHI[i+1]-CHI[i])/dz*(z-ZZ[i])+CHI[i])
 
-gal=gal.withColumn("r",dist_udf("z"))
+gal=gal.withColumn("r",dist_udf("redshift"))
 
 
 # X,Y,Z
@@ -141,8 +142,26 @@ gal=gal.withColumn("X",gal.r*F.sin(gal.theta)*F.cos(gal.phi))\
   .withColumn("Z",gal.r*F.cos(gal.theta))
 
 
-# collect
-pos=gal.select("X","Y","Z").toPandas()
+# positions
+#df_histplot(gal,"Z")
 
+#collect
+timer.start("collecting data")
+pos=gal.select("X","Y","Z")
+data=pos.collect()
+timer.stop()
 
+#INEXLIB
+c3 = inlib.histo_c3d('xyz')
+#[c3.fill(pos.X[row],pos.Y[row],pos.Z[row],1) for row in range(pos.index.size)]
+timer.start("filling c3")
+[c3.fill(row[0],row[1],row[2],1) for row in data]
+timer.stop()
 
+p = window.gui_plotter(inlib.get_cout(),1,1,0,0,1200,1000)
+p.plot_cloud3D(c3)
+p.show()
+p.steer()
+del p
+
+del c3
