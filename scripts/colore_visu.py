@@ -116,7 +116,6 @@ gal=gal.withColumn("theta",F.radians(90-gal['Dec'])).\
 # distance is tricky
 # LCDM planck (je crois)
 
-
 #add r (linear intrep)
 Nz=1000
 zmax=3.
@@ -131,8 +130,14 @@ def dist_udf(z):
 gal=gal.withColumn("r",dist_udf("z"))
 
 
-#
-pos=gal.withColumn("X",gal.r*F.sin(gal.theta)*F.cos(gal.phi))\
+# X,Y,Z
+gal=gal.withColumn("X",gal.r*F.sin(gal.theta)*F.cos(gal.phi))\
   .withColumn("Y",gal.r*F.sin(gal.theta)*F.sin(gal.phi))\
   .withColumn("Z",gal.r*F.cos(gal.theta))
+
+
+# collect
+pos=gal.select("X","Y","Z").toPandas()
+
+
 
