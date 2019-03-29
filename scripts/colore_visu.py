@@ -150,11 +150,7 @@ if Ngal>1e6:
 
 
 # min/max redshift to color
-m=minmax(gal,"redshift")
-redshift_min = m[0]
-redshift_max = m[1]
-redshift_delta = redshift_max-redshift_min
-
+#m=minmax(gal,"redshift")
 
 #collect
 timer.start("collecting data")
@@ -162,5 +158,6 @@ data=gal.select("X","Y","Z","redshift").collect()
 timer.stop()
 
 ##3d plot
-import inl
-inl.plot3D(data)
+#import inl
+#inl.plot3D(data)
+#inl.plot3D_colored(data)
