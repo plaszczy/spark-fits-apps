@@ -43,6 +43,7 @@ chi_vec=np.vectorize(chi)
 parser = argparse.ArgumentParser(description='3D plot of galactic data')
     
 parser.add_argument( "-v", help="increase verbosity",dest='verbose',action="store_true")
+parser.add_argument( "-minmax", help="print minmax bounds then exits",dest='minmax',action="store_true")
 
 parser.add_argument('-zname', dest='zname',help='Name of the redshift column',default="Z_COSMO")
 parser.add_argument('-zmin', dest='zmin',type=float,help='Min redshift to cut',default=0.)
@@ -102,17 +103,6 @@ if args.decmax<90:
 Ngal=gal.count()
 print("Ndata={}M".format(Ngal/1e6))
 
-
-#protection
-if Ngal>1e6:
-    print("More than 1M points: are you sure to continue? (y/N))")
-    answ='n'
-    c=input()
-    if not c=='y' :
-        print("exiting")
-        sys.exit()
-
-
 #XYZ transform
 #theta/phi is better than ra/dec
 gal=gal.withColumn("theta",F.radians(90-gal['Dec'])).\
@@ -139,7 +129,28 @@ gal=gal.withColumn("r",dist_udf("redshift"))
 # X,Y,Z
 gal=gal.withColumn("X",gal.r*F.sin(gal.theta)*F.cos(gal.phi))\
   .withColumn("Y",gal.r*F.sin(gal.theta)*F.sin(gal.phi))\
-  .withColumn("Z",gal.r*F.cos(gal.theta))
+  .withColumn("Z",gal.r*F.cos(gal.theta)).drop("theta").drop("phi")
+
+
+if args.minmax:
+    timer.start("minmax (put in cache)")
+    gal=gal.cache()
+    for col in gal.columns:
+        m=minmax(gal,col)
+        print("{:04.2f} < {} < {:04.2f}".format(m[0],col,m[1]))
+    timer.stop()
+    sys.exit
+
+
+#DISPLAY
+#protection
+if Ngal>1e6:
+    print("More than 1M points: are you sure to continue? (y/N))")
+    answ='n'
+    c=input()
+    if not c=='y' :
+        print("exiting")
+        sys.exit()
 
 
 # positions
