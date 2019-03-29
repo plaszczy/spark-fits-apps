@@ -21,10 +21,6 @@ sys.path.insert(0,os.path.join(os.getcwd(),".."))
 from Timer import *
 from df_tools import *
 
-#INEXLIB
-import inlib
-import window
-
 #cosmology LCDM-flat
 c_speed=constants.c/1000.
 
@@ -165,120 +161,6 @@ timer.start("collecting data")
 data=gal.select("X","Y","Z","redshift").collect()
 timer.stop()
 
-
-###################PLOT#########################
-#
-def simple_plot(data):
-    c3 = inlib.histo_c3d('xyz')
-    timer.start("filling c3")
-    [c3.fill(row[0],row[1],row[2],1) for row in data]
-    timer.stop()
-
-    #plotter
-    plotter = window.gui_plotter(inlib.get_cout(),1,1,0,0,1200,1000)
-
-    #scen graph plotter
-    sgp=plotter.plot_cloud3D(c3)
-    sgp.shape.value(inlib.sg_plotter.xyz)
-    sgp.shape_automated.value(False)
-    sgp.infos_style().visible.value(False)
-    sgp.points_style(0).color.value(inlib.colorf_black())
-    #sgp.points_style(0).modeling.value(inlib.modeling_points())
-    sgp.points_style(0).marker_style.value(inlib.marker_dot)
-    sgp.points_style(0).point_size.value(1.2)
-#
-    plotter.show()
-    plotter.steer()
-
-    del plotter
-    del c3
-
-#########
-
-import inlib
-#///////////////////////////////////
-#/// header ///////////////////
-#///////////////////////////////////
-all_sep = inlib.sg_separator()
-#all_sep.thisown = 0
-  
-camera = inlib.sg_ortho()
-camera.thisown = 0
-camera.position.value(inlib.vec3f(0,0,5))
-camera.height.value(2)
-camera.znear.value(0.1)
-camera.zfar.value(100)
-all_sep.add(camera)
-
-light = inlib.sg_head_light()
-light.thisown = 0
-light.direction.value(inlib.vec3f(1,-1,-10))
-#light.on.value(False)
-all_sep.add(light)
-
-layout = inlib.sg_matrix()
-layout.thisown = 0
-#layout.set_rotate(0,1,0,0.785)
-all_sep.add(layout)
-
-
-#/// create the scene graph : /////////////////////////////////
-cmap = inlib.SOPI_midas_heat()
-cmap_size = cmap.size()
-
-
-sep = inlib.sg_separator()
-m = inlib.sg_matrix()
-m.thisown = 0
-sep.add(m)
-
-vtxs = inlib.sg_atb_vertices()
-vtxs.thisown = 0
-vtxs.mode.value(inlib.points())
-sep.add(vtxs)
-
-#color according to redshift
-redshift_index = 3 
-for row in data:
-    color_factor = (float(row[redshift_index])-redshift_min)/redshift_delta
-    icolor = int((1.0-color_factor)*(cmap_size-1))
-    SOPI_color = cmap.get_color(icolor)  # with midas_heat : icolor 0 is black, size-1 is white.
-    r = SOPI_color.r()
-    g = SOPI_color.g()
-    b = SOPI_color.b()
-    a = 1
-    #vtxs.add(float(row[0]),float(row[1]),float(row[2]))
-    vtxs.add_pos_color(float(row[0]),float(row[1]),float(row[2]),r,g,b,a)
-
-vtxs.center()
-
-# plotting/////////////////////////////////////////////
-width = 1200
-height = 800
-
-import exlib_window as exlib
-smgr = exlib.session(inlib.get_cout()) # screen manager
-if smgr.is_valid() == True :
-    viewer = exlib.gui_viewer_window(smgr,0,0,width,height)
-    if viewer.has_window() == True :
-      sep.thisown = 0
-      all_sep.add(sep)
-      all_sep.thisown = 0
-      viewer.scene().add(all_sep);
-      viewer.set_scene_camera(camera);
-      viewer.set_scene_light(light);
-      viewer.set_plane_viewer(False);
-      viewer.set_scene_light_on(True);
-  
-      viewer.hide_main_menu();
-      viewer.hide_meta_zone();
-      viewer.show_camera_menu();
-
-      viewer.show();
-      viewer.steer();
-      
-    del viewer
-del smgr
-
-
-
+##3d plot
+import inl
+inl.plot3D(data)
