@@ -158,6 +158,6 @@ data=gal.select("X","Y","Z","redshift").collect()
 timer.stop()
 
 ##3d plot
-#import inl
+import inl
 #inl.plot3D(data)
-#inl.plot3D_colored(data)
+inl.plot3D_colored(data,width=1200,height=800)
