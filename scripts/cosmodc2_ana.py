@@ -47,7 +47,7 @@ timer=Timer()
 #
 
 ana="load"
-ff=os.path.join(os.environ['COSMODC2'],"xyz_v1.1.4.parquet")
+ff='/lsst/DC2/cosmoDC2/xyz_v1.1.4_hive'
 print("input={}".format(ff))
 df_all=spark.read.parquet(ff)
 df_all.printSchema()
@@ -55,13 +55,7 @@ timer.step(ana)
 
 ana="cache"
 
-df=df_all.select("halo_id","redshift","postion_x","postion_y","postion_z").filter("halo_id>0")
-
-#df=df_all.select("halo_id","ra","dec","redshift").filter("halo_id>0")
-#df=df\
-#  .withColumn("x",df.redshift*F.sin(F.radians(90-df.dec))*F.cos(F.radians(df.ra)))\
-#  .withColumn("y",df.redshift*F.sin(F.radians(90-df.dec))*F.sin(F.radians(df.ra)))\
-#  .withColumn("z",df.redshift*F.cos(F.radians(90-df.dec)))
+df=df_all.select("halo_id","redshift","position_x","position_y","position_z").filter("halo_id>0")
 
 df.cache().count()
 
@@ -92,38 +86,5 @@ ana="join by halo_id count"
 df=df.join(df_halo,"halo_id").cache().withColumnRenamed("count","halo_members").cache()
 df.count()
 
-df.show()
-minmax(df.filter(df['halo_members']==1),'is_central')
-
-#GUY
-from pyspark.sql import functions as F
-
-ff=os.path.join(os.environ['COSMODC2'],"xyz_v1.1.4.parquet")
-print("input={}".format(ff))
-df_all=spark.read.parquet(ff)
-df=df_all.select("halo_id","ra","dec","redshift","position_x","position_y","position_z").filter("halo_id>0")
-center_ra = 62
-half_ra = 0.9
-center_dec = -38.6
-half_dec = 0.9
-
-df=df.filter( (F.abs(df.ra-center_ra)<half_ra) & \
-                  (F.abs(df.dec-center_dec)<half_dec) & \
-                  (df.redshift.between(1,1.2)) )\
-                  .drop('halo_id').cache()
-
-
-center_x=900.
-center_y=1750.
-center_z=-1600.
-dx=150
-
-df=df_all.select("halo_id","ra","dec","redshift","position_x","position_y","position_z").filter("halo_id>0")
-df=df.filter( (F.abs(df.position_x-center_x)<dx) &\
-                  (F.abs(df.position_y-center_y)<dx) &\
-                  (F.abs(df.position_z-center_z)<dx))\
-                  .drop('halo_id').cache()
-
-
-df.count()
-df.toPandas().to_csv('out_xyz.csv')
+#gros cluster:
+df.filter(df.halo_members>500).groupby("halo_id").count().show()
