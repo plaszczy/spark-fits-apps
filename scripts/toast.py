@@ -9,8 +9,9 @@ from df_tools import *
 import pandas as pd
 import numpy as np
 import healpy as hp
-import matplotlib.pyplot as plt
-plt.set_cmap('jet')
+
+#import matplotlib.pyplot as plt
+#plt.set_cmap('jet')
 
 dc2_run1x_center=[55.064,-29.783]
 dc2_run1x_region = [[57.87, -27.25], [52.25, -27.25], [52.11, -32.25], [58.02, -32.25]]
@@ -18,13 +19,7 @@ dc2_run1x_region = [[57.87, -27.25], [52.25, -27.25], [52.11, -32.25], [58.02, -
 dc2_udf_center=[53.125,-28.100]
 dc2_udf_region=[[53.764,-27.533],[52.486,-27.533],[52.479,-28.667],[53.771,-28.667]]
 
-
-#DATA
-#ff="/global/projecta/projectdirs/lsst/global/in2p3/Run1.2p/object_catalog_v4/dpdd_dc2_object_run1.2p.parquet"
-
 ff=os.environ['RUN12P']
-#if 'MASTER' in os.environ.keys():
-#    ff=os.environ['MASTER']+'/'+ff
 
 nside=2048
 pixarea=hp.nside2pixarea(nside, degrees=True)*3600
@@ -110,6 +105,37 @@ def projmap(df,col,minmax=None):
     plt.show()
     return skyMap
 
+#from spark v2.4.0 only
+@pandas_udf('float', PandasUDFType.GROUPED_AGG)  # doctest: +SKIP
+def median_udf(v):
+    return np.median(v)
+
+
+def projmap_median(df,col,minmax=None):
+    df_map=df.select(col,"ipix").na.drop().groupBy("ipix").agg(median_udf(col))
+    #statistics per pixel
+    var=df_map.columns[-1]
+    s=df_map.describe([var])
+    s.show()
+    r=s.select(var).take(3)
+    N=int(r[0][0])
+    mu=float(r[1][0])
+    sig=float(r[2][0])
+    map_p=df_map.toPandas()
+    #now data is reduced create the healpy map
+    skyMap= np.full(hp.nside2npix(nside),hp.UNSEEN)
+    skyMap[map_p['ipix'].values]=map_p[var].values
+    
+    if minmax==None:
+        minmax=(np.max([0,mu-2*sig]),mu+2*sig)
+    hp.gnomview(skyMap,rot=[55,-29.8],reso=reso,min=minmax[0],max=minmax[1],title=var)
+    plt.show()
+    return skyMap
+
+
+
+
+
 def densitymap(df,minmax=None):
     df_map=df.select("ipix").groupBy("ipix").count()
     df_map=df_map.withColumn("density",df_map['count']/pixarea).drop("count")
@@ -144,13 +170,12 @@ spark = SparkSession.builder.getOrCreate()
 print("spark session started")
 
 
-
 print("reading {}".format(ff))
 df_all=spark.read.parquet(ff)
 
 
 cols="tract,ra,dec,good,clean,extendedness"
-for b in ['u','i']:
+for b in ['u','g','r','i','z','y']:
     s=",psFlux_flag_{0},psFlux_{0},psFluxErr_{0},mag_{0}_cModel,magerr_{0}_cModel,snr_{0}_cModel".format(b)
     cols+=s
 print(cols)
@@ -162,6 +187,8 @@ df=df_all.select(cols.split(','))
 df=df.filter((df.good==True) & (df.clean==True)&(df.extendedness==1)) 
 
 #add a column of healpix indices
+# braodcast nside
+spark.sparkContext.broadcast(nside) 
 df=df.withColumn("ipix",Ang2Pix("ra","dec"))
 
 #dont need these anymore
@@ -169,8 +196,7 @@ df=df.drop("good","clean","extendedness")
 
 print("caching...")
 print(df.columns)
-#df=df.cache()
-#df=df.persist(StorageLevel.MEMORY_ONLY_SER)
+df=df.cache()
 print("N={}M".format(df.count()/1e6))
 
 uddf=df.filter(df.ra.between(52.48,53.77)&df.dec.between(-28.66,-27.53))
