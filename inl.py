@@ -30,7 +30,7 @@ def plot3D(data,width=700,height=500,pointSize=1.2):
     del c3
 
 #################################################
-def plot3D_colored(data,width=700,height=500,col_index=3,col_minmax=None):
+def plot3D_colored(data,width=700,height=500,col_index=3,col_minmax=None,client=False):
     
     #///////////////////////////////////
     #/// header ///////////////////
@@ -88,7 +88,8 @@ def plot3D_colored(data,width=700,height=500,col_index=3,col_minmax=None):
     print("minmax ",mm)
     for row in data:
         color_factor = (float(row[col_index])-mm[0])/(mm[1]-mm[0])
-        icolor = int((1.0-color_factor)*(cmap_size-1))
+#        icolor = int((1.0-color_factor)*(cmap_size-1))
+        icolor = int((color_factor)*(cmap_size-1))
         SOPI_color = cmap.get_color(icolor)  # with midas_heat : icolor 0 is black, size-1 is white.
         r = SOPI_color.r()
         g = SOPI_color.g()
@@ -101,28 +102,59 @@ def plot3D_colored(data,width=700,height=500,col_index=3,col_minmax=None):
 
     # plotting/////////////////////////////////////////////
 
-    smgr = exlib.session(inlib.get_cout()) # screen manager
-    if smgr.is_valid() == True :
-        viewer = exlib.gui_viewer_window(smgr,0,0,width,height)
-        if viewer.has_window() == True :
-            sep.thisown = 0
-            all_sep.add(sep)
-            all_sep.thisown = 0
-            viewer.scene().add(all_sep);
-            viewer.set_scene_camera(camera);
-            viewer.set_scene_light(light);
-            viewer.set_plane_viewer(False);
-            viewer.set_scene_light_on(True);
+    if not client:
+        smgr = exlib.session(inlib.get_cout()) # screen manager
+        if smgr.is_valid() == True :
+            viewer = exlib.gui_viewer_window(smgr,0,0,width,height)
+            if viewer.has_window() == True :
+                sep.thisown = 0
+                all_sep.add(sep)
+                all_sep.thisown = 0
+                viewer.scene().add(all_sep);
+                viewer.set_scene_camera(camera);
+                viewer.set_scene_light(light);
+                viewer.set_plane_viewer(False);
+                viewer.set_scene_light_on(True);
   
-            viewer.hide_main_menu();
-            viewer.hide_meta_zone();
-            viewer.show_camera_menu();
+                viewer.hide_main_menu();
+                viewer.hide_meta_zone();
+                viewer.show_camera_menu();
 
-        viewer.show();
-        viewer.steer();
+            viewer.show();
+            viewer.steer();
       
-        del viewer
-    del smgr
+            del viewer
+        del smgr
 
+    else:
+    # client mode
+        del all_sep
+    
+        host = "127.0.0.1"
+        port = 50800
+        print("try to connect to "+host+" "+str(port)+" ...")
+  
+        import exlib_offscreen as exlib
+        dc = exlib.net_sg_client(inlib.get_cout(),False,True)  #False=quiet, True=warn if receiving unknown protocol.
+        if dc.initialize(host,port) == False:
+            print("can't connect to "+host+" "+str(port))
+            exit()
 
+        if dc.send_string(inlib.sg_s_protocol_clear_static_sg()) == False:
+            print("send protocol_clear_static_scene() failed.")
+            exit()
 
+        opts = inlib.args()
+        opts.add(inlib.sg_s_send_placement(),inlib.sg_s_placement_static())
+        if dc.send_sg(sep,opts) == False:
+            print("send_sg failed.")
+            exit()
+
+        if dc.socket().send_string(inlib.sg_s_protocol_disconnect()) == False:
+            print("send protocol_s_disconnect() failed.")
+            exit()
+
+        dc.socket().disconnect()
+        del dc
+
+        del sep
