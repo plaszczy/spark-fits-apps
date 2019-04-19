@@ -21,20 +21,6 @@ sys.path.insert(0,os.path.join(os.getcwd(),".."))
 from Timer import *
 from df_tools import *
 
-#cosmology LCDM-flat
-c_speed=constants.c/1000.
-
-H0=68.
-Omega_M=0.306324
-
-def integrand(z):
-    return c_speed/H0/np.sqrt(Omega_M*(1+z)**3+(1-Omega_M))
-
-def chi(z):
-    return integrate.quad(integrand, 0.,z)[0]
-
-chi_vec=np.vectorize(chi)
-
 #main#########################################
 parser = argparse.ArgumentParser(description='3D plot of galactic data')
     
@@ -43,7 +29,7 @@ parser.add_argument( "-minmax", help="print minmax bounds then exits",dest='minm
 
 parser.add_argument('-zname', dest='zname',help='Name of the redshift column',default="Z_COSMO")
 parser.add_argument('-zmin', dest='zmin',type=float,help='Min redshift to cut',default=0.)
-parser.add_argument('-zmax', dest='zmax',type=float,help='Max redshift to cut',default=0.1)
+parser.add_argument('-zmax', dest='zmax',type=float,help='Max redshift to cut',default=3)
 
 parser.add_argument('-raname', dest='raname',help='Name of the RA column',default="RA")
 parser.add_argument('-ramin', dest='ramin',type=float,help='Min RA to cut',default=0.0)
@@ -57,7 +43,7 @@ args = parser.parse_args(None)
 
 
 
-ff=os.environ['FITSDIR']
+ff=os.environ['COSMODC2']
 print("Working on: "+ff)
 
 #init spark
@@ -73,74 +59,56 @@ logger.LogManager.getLogger("akka").setLevel(level)
 
 timer=Timer()
 timer.start("loading")   
-gal=spark.read.format("fits").option("hdu",1)\
-  .load(ff)\
-  .select(F.col(args.raname).alias("RA"), F.col(args.decname).alias("Dec"), F.col(args.zname).alias("redshift"))
-gal.printSchema()
+df=spark.read.parquet(ff)
 timer.stop()
 
 
 #filters
-gal=gal.filter((gal.redshift>args.zmin)& (gal.redshift<args.zmax)) 
+df=df.filter("halo_id>0")
 
+df=df.filter((df.redshift>args.zmin)& (df.redshift<args.zmax)) 
 if args.ramin>0:
-    gal=gal.filter(gal["RA"]>args.ramin) 
+    df=df.filter(df["ra"]>args.ramin) 
 if args.ramax<360:
-    gal=gal.filter(gal["RA"]<args.ramax) 
+    df=df.filter(df["ra"]<args.ramax) 
 
 if args.decmin>-90:
-    gal=gal.filter(gal["Dec"]>args.decmin) 
+    df=df.filter(df["dec"]>args.decmin) 
 if args.decmax<90:
-    gal=gal.filter(gal["Dec"]<args.decmax) 
+    df=df.filter(df["dec"]<args.decmax) 
 
 
+#add abs flux
+#df=df.withColumn("AbsFlux",F.pow(F.lit(10),-0.4*df.Mag_true_g_lsst_z0))
 
-#gal=gal.cache()
-Ngal=gal.count()
-print("Ndata={}M".format(Ngal/1e6))
+#large halos selection
 
-#XYZ transform
-#theta/phi is better than ra/dec
-gal=gal.withColumn("theta",F.radians(90-gal['Dec'])).\
-        withColumn("phi",F.radians(90-gal['RA']))
+timer.start("add halo occupancy")   
+df_halo=df.groupBy("halo_id").count().cache()
+df=df.join(df_halo,"halo_id").withColumnRenamed("count","halo_members")
+timer.stop()
 
-# distance is tricky
-# LCDM planck (je crois)
+df=df.filter(df.halo_members>50)
 
-#add r (linear intrep)
-Nz=1000
-zmax=3.
-dz=zmax/(Nz-1)
-ZZ=np.linspace(0,3,Nz)
-CHI=chi_vec(ZZ)
-#linear interp
-@pandas_udf('float', PandasUDFType.SCALAR)
-def dist_udf(z):
-    i=np.array(z/dz,dtype='int')
-    return pd.Series((CHI[i+1]-CHI[i])/dz*(z-ZZ[i])+CHI[i])
-
-gal=gal.withColumn("r",dist_udf("redshift"))
-
-
-# X,Y,Z
-gal=gal.withColumn("X",gal.r*F.sin(gal.theta)*F.cos(gal.phi))\
-  .withColumn("Y",gal.r*F.sin(gal.theta)*F.sin(gal.phi))\
-  .withColumn("Z",gal.r*F.cos(gal.theta)).drop("theta").drop("phi")
-
+df=df.cache()
+Ndf=df.count()
+print("Ndata={}M".format(Ndf/1e6))
 
 if args.minmax:
     timer.start("minmax (put in cache)")
-    gal=gal.cache()
-    for col in gal.columns:
-        m=minmax(gal,col)
+    df=df.cache()
+    for col in df.columns:
+        m=minmax(df,col)
         print("{:04.2f} < {} < {:04.2f}".format(m[0],col,m[1]))
     timer.stop()
     sys.exit
 
 
+
+
 #DISPLAY
 #protection
-if Ngal>1e6:
+if Ndf>1e6:
     print("More than 1M points: are you sure to continue? (y/N))")
     answ='n'
     c=input()
@@ -149,15 +117,14 @@ if Ngal>1e6:
         sys.exit()
 
 
-# min/max redshift to color
-#m=minmax(gal,"redshift")
-
 #collect
 timer.start("collecting data")
-data=gal.select("X","Y","Z","redshift").collect()
+data=df.select("position_x","position_y","position_z","Mag_true_g_lsst_z0","size_true").collect()
 timer.stop()
+
+
 
 ##3d plot
 import inl
-#inl.plot3D(data)
-inl.plot4(data,client=True)
+inl.plot3D(data,client=True)
+#inl.plot4D(data,col_index=3,col_minmax=(-22.,-14.),client=True)

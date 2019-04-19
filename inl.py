@@ -3,34 +3,47 @@ import inlib
 import window
 import exlib_window as exlib
 
+import os
 
 ###################PLOT#########################
 #
-def plot3D(data,width=700,height=500,pointSize=1.2):
+def plot3D(data,width=700,height=500,pointSize=1.2,client=False):
     c3 = inlib.histo_c3d('xyz')
     [c3.fill(row[0],row[1],row[2],1) for row in data]
 
-    #plotter
-    plotter = window.gui_plotter(inlib.get_cout(),1,1,0,0,width,height)
+#plotter
+    if not client:
+        plotter = window.gui_plotter(inlib.get_cout(),1,1,0,0,width,height)
+    else:
+        import inexlib_client
+        style_file = os.path.join(os.environ['EXLIB_RES_DIR'],"ioda.style")
+        plotter = inexlib_client.plotter(inlib.get_cout(),1,1,"127.0.0.1",50800,style_file)
 
-    #scen graph plotter
+#scen graph plotter
     sgp=plotter.plot_cloud3D(c3)
     sgp.shape.value(inlib.sg_plotter.xyz)
     sgp.shape_automated.value(False)
     sgp.infos_style().visible.value(False)
-    sgp.points_style(0).color.value(inlib.colorf_black())
+    #sgp.points_style(0).color.value(inlib.colorf_black())
+    sgp.points_style(0).color.value(inlib.colorf_yellow())
     #sgp.points_style(0).modeling.value(inlib.modeling_points())
     sgp.points_style(0).marker_style.value(inlib.marker_dot)
     sgp.points_style(0).point_size.value(pointSize)
-#
-    plotter.show()
-    plotter.steer()
+
+    if not client:
+        plotter.show()
+        plotter.steer()
+    else:
+        print("clear scene")
+        plotter.send_clear_static_scene()
+        print("send data--->")
+        plotter.send_plots()
 
     del plotter
     del c3
 
 #################################################
-def plot3D_colored(data,width=700,height=500,col_index=3,col_minmax=None,client=False):
+def plot4D(data,width=700,height=500,col_index=3,col_minmax=None,client=False):
     
     #///////////////////////////////////
     #/// header ///////////////////
@@ -56,8 +69,9 @@ def plot3D_colored(data,width=700,height=500,col_index=3,col_minmax=None,client=
     #layout.set_rotate(0,1,0,0.785)
     all_sep.add(layout)
 
-
-    #/// create the scene graph : /////////////////////////////////
+    #/////////////////////////////////////////
+    #/// create the scene graph : ////////////
+    #/////////////////////////////////////////
     cmap = inlib.SOPI_midas_heat()
     cmap_size = cmap.size()
 
@@ -85,11 +99,17 @@ def plot3D_colored(data,width=700,height=500,col_index=3,col_minmax=None,client=
     else:
         mm=col_minmax
 
-    print("minmax ",mm)
+    print("color bounds=",mm)
     for row in data:
         color_factor = (float(row[col_index])-mm[0])/(mm[1]-mm[0])
-#        icolor = int((1.0-color_factor)*(cmap_size-1))
-        icolor = int((color_factor)*(cmap_size-1))
+        if color_factor<0:
+            icolor=0
+        elif color_factor>1:
+            icolor=cmap_size-1
+        else:
+            icolor = int((1.0-color_factor)*(cmap_size-1))
+#        icolor = int((color_factor)*(cmap_size-1))
+
         SOPI_color = cmap.get_color(icolor)  # with midas_heat : icolor 0 is black, size-1 is white.
         r = SOPI_color.r()
         g = SOPI_color.g()
@@ -132,7 +152,7 @@ def plot3D_colored(data,width=700,height=500,col_index=3,col_minmax=None,client=
     
         host = "127.0.0.1"
         port = 50800
-        print("try to connect to "+host+" "+str(port)+" ...")
+        print("sending data to "+host+":"+str(port)+" ->...")
   
         import exlib_offscreen as exlib
         dc = exlib.net_sg_client(inlib.get_cout(),False,True)  #False=quiet, True=warn if receiving unknown protocol.

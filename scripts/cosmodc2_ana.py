@@ -87,4 +87,4 @@ df=df.join(df_halo,"halo_id").cache().withColumnRenamed("count","halo_members").
 df.count()
 
 #gros cluster:
-df.filter(df.halo_members>500).groupby("halo_id").count().show()
+df.filter(df.halo_members>300).groupby("halo_id").count().show()
