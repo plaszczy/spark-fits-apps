@@ -24,8 +24,8 @@ def plot3D(data,width=700,height=500,pointSize=1.2,client=False):
     sgp.shape.value(inlib.sg_plotter.xyz)
     sgp.shape_automated.value(False)
     sgp.infos_style().visible.value(False)
-    #sgp.points_style(0).color.value(inlib.colorf_black())
-    sgp.points_style(0).color.value(inlib.colorf_yellow())
+    sgp.points_style(0).color.value(inlib.colorf_black())
+    #sgp.points_style(0).color.value(inlib.colorf_yellow())
     #sgp.points_style(0).modeling.value(inlib.modeling_points())
     sgp.points_style(0).marker_style.value(inlib.marker_dot)
     sgp.points_style(0).point_size.value(pointSize)
@@ -34,9 +34,9 @@ def plot3D(data,width=700,height=500,pointSize=1.2,client=False):
         plotter.show()
         plotter.steer()
     else:
-        print("clear scene")
+        print("clearing scene")
         plotter.send_clear_static_scene()
-        print("send data--->")
+        print("sending data to 127.0.0.1:50800 ...")
         plotter.send_plots()
 
     del plotter

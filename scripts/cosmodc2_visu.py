@@ -39,6 +39,8 @@ parser.add_argument('-decname', dest='decname',help='Name of the DEC column',def
 parser.add_argument('-decmin', dest='decmin',type=float,help='Min DEC to cut',default=-90.)
 parser.add_argument('-decmax', dest='decmax',type=float,help='Max DEC to cut',default=90.)
 
+parser.add_argument('-halomin', dest='halomin',type=int,help='minimum number of members in halo',default=0)
+
 args = parser.parse_args(None)
 
 
@@ -83,17 +85,21 @@ if args.decmax<90:
 
 #large halos selection
 
-timer.start("add halo occupancy")   
-df_halo=df.groupBy("halo_id").count().cache()
-df=df.join(df_halo,"halo_id").withColumnRenamed("count","halo_members")
-timer.stop()
+if args.halomin>0:
+    timer.start("add halo occupancy")   
+    df_halo=df.groupBy("halo_id").count().cache()
+    df=df.join(df_halo,"halo_id").withColumnRenamed("count","halo_members")
+    timer.stop()
+    df=df.filter(df.halo_members>args.halomin)
 
-df=df.filter(df.halo_members>50)
-
+timer.start("caching")
 df=df.cache()
 Ndf=df.count()
+timer.stop()
 print("Ndata={}M".format(Ndf/1e6))
 
+
+##########################
 if args.minmax:
     timer.start("minmax (put in cache)")
     df=df.cache()
