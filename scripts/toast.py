@@ -1,14 +1,25 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import pandas_udf, PandasUDFType
 from pyspark import StorageLevel
 
 import os,sys
 sys.path.insert(0,os.path.join(os.getcwd(),".."))
 from df_tools import *
 
-import pandas as pd
+###################
+from pyspark.sql.functions import pandas_udf, PandasUDFType
 import numpy as np
+import pandas as pd
 import healpy as hp
+
+nside=2048
+pixarea=hp.nside2pixarea(nside, degrees=True)*3600
+reso= hp.nside2resol(nside,arcmin=True)
+#create the ang2pix user-defined-function. 
+@pandas_udf('int', PandasUDFType.SCALAR)
+def Ang2Pix(ra,dec):
+    return pd.Series(hp.ang2pix(nside,np.radians(90-dec),np.radians(ra)))
+##################
+
 
 #import matplotlib.pyplot as plt
 #plt.set_cmap('jet')
@@ -18,18 +29,6 @@ dc2_run1x_region = [[57.87, -27.25], [52.25, -27.25], [52.11, -32.25], [58.02, -
 
 dc2_udf_center=[53.125,-28.100]
 dc2_udf_region=[[53.764,-27.533],[52.486,-27.533],[52.479,-28.667],[53.771,-28.667]]
-
-ff=os.environ['RUN12P']
-
-nside=2048
-pixarea=hp.nside2pixarea(nside, degrees=True)*3600
-reso= hp.nside2resol(nside,arcmin=True)
-#create the ang2pix user-defined-function. 
-#we use pandas_udf because they are more efficient
-@pandas_udf('int', PandasUDFType.SCALAR)
-def Ang2Pix(ra,dec):
-    return pd.Series(hp.ang2pix(nside,np.radians(90-dec),np.radians(ra)))
-
 
 
 def tracts_outline(df):
@@ -111,7 +110,7 @@ def median_udf(v):
     return np.median(v)
 
 
-def projmap_median(df,col,minmax=None):
+def projmap_median_udf(df,col,minmax=None):
     df_map=df.select(col,"ipix").na.drop().groupBy("ipix").agg(median_udf(col))
     #statistics per pixel
     var=df_map.columns[-1]
@@ -133,7 +132,24 @@ def projmap_median(df,col,minmax=None):
     return skyMap
 
 
+def projmap_median(df,col,minmax=None):
+    rdd=df.select("ipix",col).na.drop().rdd.map(lambda r: (r[0],r[1]))
+    map_rdd=rdd.groupByKey().mapValues(tuple).mapValues(np.median)
+    #collect renvoie un eliste de tuples
+    #back to pandas
+    map_p=map_rdd.map(lambda r: (r[0],float(r[1]))).toDF().toPandas()
+    val=np.array(map_p._2.values)
+    mu=val.mean()
+    sig=val.std()
+    if minmax==None:
+        minmax=(np.max([0,mu-2*sig]),mu+2*sig)
 
+    print("N={} \nmean={} \nsigma={}\nmin={}\nmax={}".format(val.size,mu,sig,min(val),max(val)))
+    skyMap= np.full(hp.nside2npix(nside),hp.UNSEEN)
+    skyMap[map_p._1.values]=val
+    hp.gnomview(skyMap,rot=[55,-29.8],reso=reso,min=minmax[0],max=minmax[1],title="median("+col+")")
+    plt.show()
+    return skyMap
 
 
 def densitymap(df,minmax=None):
@@ -170,6 +186,7 @@ spark = SparkSession.builder.getOrCreate()
 print("spark session started")
 
 
+ff=os.environ['RUN12P']
 print("reading {}".format(ff))
 df_all=spark.read.parquet(ff)
 
