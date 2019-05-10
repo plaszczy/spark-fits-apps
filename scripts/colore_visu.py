@@ -158,6 +158,7 @@ data=gal.select("X","Y","Z","redshift").collect()
 timer.stop()
 
 ##3d plot
-import inl
+#import inl
+from inl import *
 #inl.plot3D(data)
-inl.plot4(data,client=True)
+#inl.plot4D(data,client=True)

@@ -123,6 +123,7 @@ def plot4D(data,width=700,height=500,col_index=3,col_minmax=None,client=False):
     # plotting/////////////////////////////////////////////
 
     if not client:
+        import exlib_window as exlib
         smgr = exlib.session(inlib.get_cout()) # screen manager
         if smgr.is_valid() == True :
             viewer = exlib.gui_viewer_window(smgr,0,0,width,height)
