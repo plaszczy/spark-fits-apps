@@ -31,4 +31,5 @@ df['r']=pd.Series(rgb[0])
 df['g']=pd.Series(rgb[1])
 df['b']=pd.Series(rgb[2])
 
+import inl
 inl.plot3D_col(df.values,pointSize=5)

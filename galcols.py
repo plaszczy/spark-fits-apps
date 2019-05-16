@@ -47,9 +47,9 @@ if __name__ == '__main__':
     val=value(max_mag,mm)
     val=clip(val+0.5,0.5,1)
 
-    sat=np.ones_like(h)
+    sat=np.ones_like(h)*0.1
 
     rgb=np.transpose(hsv2rgb(h,sat,val))
 
     import inl
-    inl.plot3D(rgb,width=700,height=700)
+    inl.plot3D(rgb,width=700,height=500)
