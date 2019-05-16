@@ -42,6 +42,124 @@ def plot3D(data,width=700,height=500,pointSize=1.2,client=False):
     del plotter
     del c3
 
+
+#################################################
+
+def plot3D_col(data,width=700,height=500,pointSize=3,client=False):
+    
+    #///////////////////////////////////
+    #/// header ///////////////////
+    #///////////////////////////////////
+    all_sep = inlib.sg_separator()
+  
+    camera = inlib.sg_ortho()
+    camera.thisown = 0
+    camera.position.value(inlib.vec3f(0,0,5))
+    camera.height.value(2)
+    camera.znear.value(0.1)
+    camera.zfar.value(100)
+    all_sep.add(camera)
+
+    light = inlib.sg_head_light()
+    light.thisown = 0
+    light.direction.value(inlib.vec3f(1,-1,-10))
+    #light.on.value(False)
+    all_sep.add(light)
+
+    layout = inlib.sg_matrix()
+    layout.thisown = 0
+    #layout.set_rotate(0,1,0,0.785)
+    all_sep.add(layout)
+
+    #/////////////////////////////////////////
+    #/// create the scene graph : ////////////
+    #/////////////////////////////////////////
+    cmap = inlib.SOPI_midas_heat()
+    cmap_size = cmap.size()
+
+    sep = inlib.sg_separator()
+    m = inlib.sg_matrix()
+    m.thisown = 0
+    sep.add(m)
+
+    vtxs = inlib.sg_colored_sized_points()
+
+    vtxs.thisown = 0
+    vtxs.mode.value(inlib.points())
+    sep.add(vtxs)
+
+    for row in data:
+        r=row[3]
+        g=row[4]
+        b=row[5]
+        a = 1
+        vtxs.add(float(row[0]),float(row[1]),float(row[2]),float(r),float(g),float(b),a,pointSize)
+
+    vtxs.center()
+
+    # plotting/////////////////////////////////////////////
+
+    if not client:
+        import exlib_window as exlib
+        smgr = exlib.session(inlib.get_cout()) # screen manager
+        if smgr.is_valid() == True :
+            viewer = exlib.gui_viewer_window(smgr,0,0,width,height)
+            if viewer.has_window() == True :
+                sep.thisown = 0
+                all_sep.add(sep)
+                all_sep.thisown = 0
+                viewer.scene().add(all_sep);
+                viewer.set_scene_camera(camera);
+                viewer.set_scene_light(light);
+                viewer.set_plane_viewer(False);
+                viewer.set_scene_light_on(True);
+  
+                viewer.hide_main_menu();
+                viewer.hide_meta_zone();
+                viewer.show_camera_menu();
+
+            viewer.show();
+            viewer.steer();
+      
+            del viewer
+        del smgr
+
+    else:
+    # client mode
+        del all_sep
+    
+        host = "127.0.0.1"
+        port = 50800
+        print("sending data to "+host+":"+str(port)+" ->...")
+  
+        import exlib_offscreen as exlib
+        dc = exlib.net_sg_client(inlib.get_cout(),False,True)  #False=quiet, True=warn if receiving unknown protocol.
+        if dc.initialize(host,port) == False:
+            print("can't connect to "+host+" "+str(port))
+            exit()
+
+        if dc.send_string(inlib.sg_s_protocol_clear_static_sg()) == False:
+            print("send protocol_clear_static_scene() failed.")
+            exit()
+
+        opts = inlib.args()
+        opts.add(inlib.sg_s_send_placement(),inlib.sg_s_placement_static())
+        if dc.send_sg(sep,opts) == False:
+            print("send_sg failed.")
+            exit()
+
+        if dc.socket().send_string(inlib.sg_s_protocol_disconnect()) == False:
+            print("send protocol_s_disconnect() failed.")
+            exit()
+
+        dc.socket().disconnect()
+        del dc
+
+        del sep
+
+
+
+
 #################################################
 def plot4D(data,width=700,height=500,col_index=3,col_minmax=None,client=False):
     
@@ -181,6 +299,8 @@ def plot4D(data,width=700,height=500,col_index=3,col_minmax=None,client=False):
         del sep
 
 #################################################
+
+
 def plot5D(data,width=700,height=500,col_index=3,col_minmax=None,client=False):
     
     #///////////////////////////////////
