@@ -6,6 +6,12 @@ import numpy as np
 import colorsys
 hsv2rgb=np.vectorize(colorsys.hsv_to_rgb)
 
+hls2rgb=np.vectorize(colorsys.hls_to_rgb)
+
+def grid3D(x,y,z):
+    N=len(x)
+    m=np.meshgrid(x,y,z)
+    return np.transpose(m).reshape(N**3,3)
 
 def clip(v,xmin,xmax):
     w=v<xmin
@@ -50,6 +56,11 @@ if __name__ == '__main__':
     sat=np.ones_like(h)*0.1
 
     rgb=np.transpose(hsv2rgb(h,sat,val))
+
+    N=100
+    r=linspace(0,1,N)
+    m=meshgrid(r,r,r)
+    rgb=transpose(m).reshape(N**3,3)
 
     import inl
     inl.plot3D(rgb,width=700,height=500)
