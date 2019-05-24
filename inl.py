@@ -161,7 +161,7 @@ def plot3D_rgb(data,width=700,height=500,pointSize=3,rgb_index=(3,4,5),client=Fa
 
 
 #################################################
-def plot3D_size_heat(data,width=700,height=500,size_index=3,col_index=4,client=False):
+def plot3D_size_heat(data,iord,width=700,height=500,col_index=3,client=False):
     
     #///////////////////////////////////
     #/// header ///////////////////
@@ -206,47 +206,36 @@ def plot3D_size_heat(data,width=700,height=500,size_index=3,col_index=4,client=F
     #ranges
     colmin=data[0][col_index]
     colmax=data[0][col_index]
-    szmin=data[0][size_index]
-    szmax=data[0][size_index]
     for row in data[1:] :
         col=row[col_index]
         if col<colmin:
             colmin=col
         if col>colmax:
             colmax=col
-        size=row[size_index]
-        if size<szmin:
-            szmin=size
-        if size>szmax:
-            szmax=size
-
     mm=(colmin,colmax)
-    sz=(szmin,szmax)
 
     print("color bounds=",mm)
-    print("size bounds=",sz)
-    
 
-    for row in data:
-        #entre [0,1]
-        color_factor = (float(row[col_index])-mm[0])/(mm[1]-mm[0])
-        if color_factor<0:
-            icolor=0
-        elif color_factor>1:
-            icolor=cmap_size-1
-        else:
-            icolor = int((1.0-color_factor)*(cmap_size-1))
+    #loop in size chuncks
+    for isize in range(len(iord)):
+        _size=isize+1
+        for i in iord[isize]:
+            row=data[i]
+            color_factor = (float(row[col_index])-mm[0])/(mm[1]-mm[0])
+            if color_factor<0:
+                icolor=0
+            elif color_factor>1:
+                icolor=cmap_size-1
+            else:
+                icolor = int((1.0-color_factor)*(cmap_size-1))
 
-        SOPI_color = cmap.get_color(icolor)  # with midas_heat : icolor 0 is black, size-1 is white.
-        r = SOPI_color.r()
-        g = SOPI_color.g()
-        b = SOPI_color.b()
-        a = 1
+            SOPI_color = cmap.get_color(icolor)  # with midas_heat : icolor 0 is black, size-1 is white.
+            r = SOPI_color.r()
+            g = SOPI_color.g()
+            b = SOPI_color.b()
+            a = 1
 
-        #sz entre [0,10]
-        size=(float(row[size_index])-sz[0])/(sz[1]-sz[0])*10.
-
-        vtxs.add(float(row[0]),float(row[1]),float(row[2]),r,g,b,a,size)
+            vtxs.add(float(row[0]),float(row[1]),float(row[2]),r,g,b,a,_size)
 
     vtxs.center()
 

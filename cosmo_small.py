@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-
+from astropy.visualization import make_lupton_rgb
 
 def superclip(x,a,b,bounds=None):
 	if bounds is None:
@@ -8,6 +8,15 @@ def superclip(x,a,b,bounds=None):
 	r=(x-bounds[0])/(bounds[1]-bounds[0])
 	v=a+(b-a)*r
 	return np.clip(v,a,b)
+
+def bin_and_sort(x,N,bounds=None):
+    r=superclip(x,0,1,bounds)
+ # on veut de 1 a N+1
+    bin=(r*N+1).astype(int)
+    iord=[]
+    for i in range(1,N+1):
+        iord.append(where(bin==i)[0].tolist())
+    return bin,iord
 
 
 R=np.array([1,0,0])
@@ -56,5 +65,27 @@ print(df.columns)
 #df=df.assign(g=rgb[1])
 #df=df.assign(b=rgb[2])
 
+
+#lupton
+i=dfp['Mag_true_i_lsst_z0']
+icol=superclip(abs(i),0,256,bounds=np.percentile(i,[1,99]))
+
+r=dfp['Mag_true_r_lsst_z0']
+rcol=superclip(abs(r),0,256,bounds=np.percentile(i,[1,99]))
+
+g=dfp['Mag_true_g_lsst_z0']
+gcol=superclip(abs(g),0,256,bounds=np.percentile(i,[1,99]))
+
+rgb=make_lupton_rgb(icol,rcol,gcol)
+
+
 import inl
 inl.plot3D_heat(df.values,pointSize=1,width=1200,height=1000)
+
+#size
+sz=dfp['size_true']
+q=percentile(sz,[1,99])
+b,iord=bin_and_sort(sz,10,bounds=q)
+
+inl.plot3D_size_heat(df.values,iord)
+
