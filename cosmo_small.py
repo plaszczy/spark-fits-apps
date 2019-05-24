@@ -85,7 +85,13 @@ inl.plot3D_heat(df.values,pointSize=1,width=1200,height=1000)
 #size
 sz=dfp['size_true']
 q=percentile(sz,[1,99])
-b,iord=bin_and_sort(sz,10,bounds=q)
 
-inl.plot3D_size_heat(df.values,iord)
+Nsz=50
+b,iord=bin_and_sort(sz,Nsz,bounds=q)
+# hist_plot(b,bins=100)
+
+size_bins=superclip(arange(Nsz),1,10)
+
+
+inl.plot3D_size_heat(df.values,iord,bin_size=size_bins,width=1200,height=900)
 

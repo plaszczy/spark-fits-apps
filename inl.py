@@ -161,7 +161,7 @@ def plot3D_rgb(data,width=700,height=500,pointSize=3,rgb_index=(3,4,5),client=Fa
 
 
 #################################################
-def plot3D_size_heat(data,iord,width=700,height=500,col_index=3,client=False):
+def plot3D_size_heat(data,iord,bin_size=None,width=700,height=500,col_index=3,client=False):
     
     #///////////////////////////////////
     #/// header ///////////////////
@@ -219,6 +219,8 @@ def plot3D_size_heat(data,iord,width=700,height=500,col_index=3,client=False):
     #loop in size chuncks
     for isize in range(len(iord)):
         _size=isize+1
+        if not bin_size is None:
+            _size=bin_size[isize]
         for i in iord[isize]:
             row=data[i]
             color_factor = (float(row[col_index])-mm[0])/(mm[1]-mm[0])
