@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from astropy.visualization import make_lupton_rgb
+from astropy import units as u
 
 def superclip(x,a,b,bounds=None):
 	if bounds is None:
@@ -67,22 +68,28 @@ print(df.columns)
 
 
 #lupton
-i=dfp['Mag_true_i_lsst_z0']
-icol=superclip(abs(i),0,256,bounds=np.percentile(i,[1,99]))
+mag_i=dfp['Mag_true_i_lsst_z0'].values
+mag_r=dfp['Mag_true_r_lsst_z0'].values
+mag_g=dfp['Mag_true_g_lsst_z0'].values
 
-r=dfp['Mag_true_r_lsst_z0']
-rcol=superclip(abs(r),0,256,bounds=np.percentile(i,[1,99]))
+flux_g = (mag_g*u.ABmag).to(u.nJy).value
+flux_r = (mag_r*u.ABmag).to(u.nJy).value
+flux_i = (mag_i*u.ABmag).to(u.nJy).value
+rgb_arr = make_lupton_rgb(flux_i,flux_r,flux_g)
+rgb_256=transpose(rgb_arr[0])
+rgb=array(rgb_256,dtype=float)/256
 
-g=dfp['Mag_true_g_lsst_z0']
-gcol=superclip(abs(g),0,256,bounds=np.percentile(i,[1,99]))
-
-rgb=make_lupton_rgb(icol,rcol,gcol)
+df=df.assign(r=rgb[0])
+df=df.assign(g=rgb[1])
+df=df.assign(b=rgb[2])
 
 
 import inl
-inl.plot3D_heat(df.values,pointSize=1,width=1200,height=1000)
+#inl.plot3D_heat(df.values,pointSize=1,width=1200,height=1000)
+inl.plot3D_rgb(df.values,pointSize=1)
 
-#size
+
+#size##########################
 sz=dfp['size_true']
 q=percentile(sz,[1,99])
 
