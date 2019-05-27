@@ -440,8 +440,7 @@ def plot3D_heat(data,width=700,height=500,col_index=3,pointSize=1,col_minmax=Non
         del sep
 
 #################################################
-
-def plot5D(data,width=700,height=500,col_index=3,col_minmax=None,client=False):
+def plot3D_rgb_size(data,iord,bin_size=None,width=700,height=500,rgb_index=(3,4,5),client=False):
     
     #///////////////////////////////////
     #/// header ///////////////////
@@ -478,45 +477,25 @@ def plot5D(data,width=700,height=500,col_index=3,col_minmax=None,client=False):
     m.thisown = 0
     sep.add(m)
 
-#    vtxs = inlib.sg_atb_vertices()
     vtxs = inlib.sg_colored_sized_points()
-
     vtxs.thisown = 0
     vtxs.mode.value(inlib.points())
     sep.add(vtxs)
 
-    #color according to redshift
-    #look for min/max
-    if col_minmax==None:
-        xmin=data[0][col_index]
-        xmax=data[0][col_index]
-        for row in data[1:] :
-            if row[col_index]<xmin:
-                xmin=row[col_index]
-            if row[col_index]>xmax:
-                xmax=row[col_index]
-        mm=(xmin,xmax)
-    else:
-        mm=col_minmax
 
-    print("color bounds=",mm)
-    for row in data:
-        color_factor = (float(row[col_index])-mm[0])/(mm[1]-mm[0])
-        if color_factor<0:
-            icolor=0
-        elif color_factor>1:
-            icolor=cmap_size-1
-        else:
-            icolor = int((1.0-color_factor)*(cmap_size-1))
-#        icolor = int((color_factor)*(cmap_size-1))
+    #loop in size chuncks
+    for isize in range(len(iord)):
+        _size=isize+1
+        if not bin_size is None:
+            _size=bin_size[isize]
+        for i in iord[isize]:
+            row=data[i]
+            r=row[rgb_index[0]]
+            g=row[rgb_index[1]]
+            b=row[rgb_index[2]]
+            a = 1
 
-        SOPI_color = cmap.get_color(icolor)  # with midas_heat : icolor 0 is black, size-1 is white.
-        r = SOPI_color.r()
-        g = SOPI_color.g()
-        b = SOPI_color.b()
-        a = 1
-        size=5
-        vtxs.add(float(row[0]),float(row[1]),float(row[2]),r,g,b,a,size)
+            vtxs.add(float(row[0]),float(row[1]),float(row[2]),r,g,b,a,_size)
 
     vtxs.center()
 
@@ -579,4 +558,3 @@ def plot5D(data,width=700,height=500,col_index=3,col_minmax=None,client=False):
         del dc
 
         del sep
-
