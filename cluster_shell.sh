@@ -42,9 +42,8 @@ echo "#cores used=$ncores_tot"
 echo "mem used= ${total_mem} GB"
 echo "mem for cache $(echo $n_executors*$executor_mem*0.6|bc) GB"
 
-#LOCAL
-
-if [ -z "$MASTER" ] ; then
+#LOCAL mode
+if [ -z "$HDFSROOT" ] ; then
 #YARN
 echo "YARN execution"
 master="--master yarn "
