@@ -8,6 +8,7 @@ matplotlib.rcParams['image.cmap'] = 'jet'
 import matplotlib.pyplot as plt
 
 def minmax(df,col):
+    print("{} : min/max=[{},{}]".format(col,m[0],m[1]))
     return df.select(F.min(col),F.max(col)).first()
 
 def num_nans(df,col=None):
