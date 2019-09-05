@@ -8,7 +8,6 @@ matplotlib.rcParams['image.cmap'] = 'jet'
 import matplotlib.pyplot as plt
 
 def minmax(df,col):
-    print("{} : min/max=[{},{}]".format(col,m[0],m[1]))
     return df.select(F.min(col),F.max(col)).first()
 
 def num_nans(df,col=None):
@@ -33,6 +32,7 @@ def df_hist(df,col,Nbins=50,bounds=None):
 
     if (bounds==None) :
         m=minmax(df,col)
+        print("{} : min/max=[{},{}]".format(col,m[0],m[1]))
         zmin=m[0]
         zmax=m[1]
     else:
@@ -43,12 +43,12 @@ def df_hist(df,col,Nbins=50,bounds=None):
     dz=(zmax-zmin)/Nbins
     zbin=df.select(df[col],((df[col]-zmin-dz/2)/dz).cast(IntegerType()).alias('bin'))
     h=zbin.groupBy("bin").count().orderBy(F.asc("bin"))
-    return h.select("bin",(zmin+dz/2+h['bin']*dz).alias('loc'),"count").drop("bin"),dz,(zmin,zmax)
+    return h.select("bin",(zmin+dz/2+h['bin']*dz).alias('loc'),"count").drop("bin").toPandas(),dz
 
 
 def df_histplot(df,col,Nbins=50,bounds=None,doStat=False):    
     result=df_hist(df,col,Nbins,bounds)
-    hp=result[0].toPandas()
+    hp=result[0]
     step=result[1]
     plt.bar(hp['loc'].values,hp['count'].values,step,color='white',edgecolor='black')
     plt.xlabel(col)

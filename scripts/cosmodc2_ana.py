@@ -38,27 +38,22 @@ df_all=spark.read.parquet(ff)
 print("#partitions={}".format(df_all.rdd.getNumPartitions()))
 df_all.printSchema()
 
-ana="filter+cache"
-#df=df_all.select("halo_id","redshift",'ra','dec','mag_i').filter("halo_id>0")
-
-bands=['u','g','r','i','z','y']
-
-
 #FILTER
 df=df_all.filter(df_all.halo_id>0)
 
-#SELECT COLS
+#SELECTION
 cols="ra,dec,redshift"
+bands=['u','g','r','i','z','y']
 for b in bands:
     s=",mag_{0},mag_true_{0}".format(b)
     cols+=s
-print("selection=",cols)
-
 #use these columns
 df=df.select(cols.split(','))
 
 
-print("output cols=> "+cols)
+print("After selection=")
+df.printSchema()
+
 
 # ADD HEALPIXELS
 print('add healpixels')
@@ -74,6 +69,24 @@ timer.stop()
 
 ## COALESX\CE?
 df=df.coalesce(450)
-print("coalesce N=".format(df.count))
+print("coalesce {}".format(df.rdd.getNumPartitions()))
 
 
+cols=['b','g','r','y','m','k']
+for (b,c) in zip(bands,cols):
+    h,step=df_hist(df,"mag_{}".format(b),bounds=(15,40))
+    #plt.bar(h['loc'],h['count'],step,label=b,color='white',edgecolor=c)
+    plt.plot(h['loc'],h['count'],color=c,label=b)
+    
+plt.legend()
+
+#residues
+for b in bands:
+    print(b,"mag_{}".format(b),"mag_true_{}".format(b))
+    df=df.withColumn("res_{}".format(b),df["mag_{}".format(b)]-df["mag_true_{}".format(b)])
+
+
+for (b,c) in zip(bands,cols):
+    h,step=df_hist(df,"res")
+    plt.plot(h['loc'],h['count'],color=c,label=b)
+    df=df.drop('res')
