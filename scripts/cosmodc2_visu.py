@@ -131,6 +131,6 @@ timer.stop()
 
 
 ##3d plot
-import inl
-inl.plot3D(data,client=True)
+import gal3D
+gal3D.plot3D(data,client=True)
 #inl.plot4D(data,col_index=3,col_minmax=(-22.,-14.),client=True)
