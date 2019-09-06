@@ -42,11 +42,11 @@ df_all.printSchema()
 df=df_all.filter(df_all.halo_id>0)
 
 #SELECTION
-cols="halo_id,ra,dec,redshift,mag_true_u"
-bands=['u','g','r','i','z','y']
-for b in bands:
-    s=",mag_{0}".format(b)
-    cols+=s
+cols="halo_id,ra,dec,redshift,position_x,position_y,position_z,size_true,stellar_mass"
+#bands=['u','g','r','i','z','y']
+#for b in bands:
+#    s=",mag_{0}".format(b)
+#    cols+=s
 #use these columns
 df=df.select(cols.split(','))
 
@@ -59,6 +59,9 @@ print("#VARIABLES={} out of {} ({:3.1f}%)".format(len(df.columns),len(df_all.col
 print('add healpixels')
 df=add_healpixels(df)
 
+
+#fileter
+#df=df.filter(df.ipix==38188148)
 
 #CACHE
 print("caching...")

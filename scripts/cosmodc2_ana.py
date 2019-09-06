@@ -13,7 +13,7 @@ df_histplot(df_lens,"mag_lens-mag_true",bounds=(-0.4,0.5),Nbins=80,doStat=True)
 
 
 #strong lensing?
-In [14]: df_lens.filter(df_lens["mag_lens-mag_true"]<-2.5).show()
+df_lens.filter(df_lens["mag_lens-mag_true"]<-2.5).show()
 
 -------------+---------+----------+---------+----------+---------+---------+---------+---------+---------+---------+--------+-----------------+
 |      halo_id|       ra|       dec| redshift|mag_true_u|    mag_u|    mag_g|    mag_r|    mag_i|    mag_z|    mag_y|    ipix|mag_lens-mag_true|
@@ -25,7 +25,6 @@ haloid=3584900064124,4950100064124
 
 ipix=38188148
 
-df.filter(df.ipix==38188148).count()
 716  (600+-90 pour area=2.9 arcmin^2)
 
 
