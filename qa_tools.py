@@ -67,7 +67,7 @@ def tracts_outline2(df):
     pix = df_repart.rdd.mapPartitions(get_borders_from_ipix).collect()
     return pix
 
-def projmap(df,col,minmax=None):
+def projmap(df,col,minmax=None,**kwargs ):
     df_map=df.select(col,"ipix").na.drop().groupBy("ipix").avg(col)
     #statistics per pixel
     var=df_map.columns[-1]
@@ -84,7 +84,7 @@ def projmap(df,col,minmax=None):
     
     if minmax==None:
         minmax=(np.max([0,mu-2*sig]),mu+2*sig)
-    hp.gnomview(skyMap,rot=[55,-29.8],reso=reso,min=minmax[0],max=minmax[1],title=var)
+    hp.gnomview(skyMap,reso=reso,min=minmax[0],max=minmax[1],title=var,**kwargs )
     plt.show()
     return skyMap
 
@@ -94,7 +94,7 @@ def median_udf(v):
     return np.median(v)
 
 
-def projmap_median_udf(df,col,minmax=None):
+def projmap_median_udf(df,col,minmax=None,**kwargs ):
     df_map=df.select(col,"ipix").na.drop().groupBy("ipix").agg(median_udf(col))
     #statistics per pixel
     var=df_map.columns[-1]
@@ -111,12 +111,12 @@ def projmap_median_udf(df,col,minmax=None):
     
     if minmax==None:
         minmax=(np.max([0,mu-2*sig]),mu+2*sig)
-    hp.gnomview(skyMap,rot=[55,-29.8],reso=reso,min=minmax[0],max=minmax[1],title=var)
+    hp.gnomview(skyMap,reso=reso,min=minmax[0],max=minmax[1],title=var,**kwargs )
     plt.show()
     return skyMap
 
 
-def projmap_median(df,col,minmax=None):
+def projmap_median(df,col,minmax=None,**kwargs ):
     rdd=df.select("ipix",col).na.drop().rdd.map(lambda r: (r[0],r[1]))
     map_rdd=rdd.groupByKey().mapValues(tuple).mapValues(np.median)
     #collect renvoie un eliste de tuples
@@ -131,12 +131,12 @@ def projmap_median(df,col,minmax=None):
     print("N={} \nmean={} \nsigma={}\nmin={}\nmax={}".format(val.size,mu,sig,min(val),max(val)))
     skyMap= np.full(hp.nside2npix(nside),hp.UNSEEN)
     skyMap[map_p._1.values]=val
-    hp.gnomview(skyMap,rot=[55,-29.8],reso=reso,min=minmax[0],max=minmax[1],title="median("+col+")")
+    hp.gnomview(skyMap,reso=reso,min=minmax[0],max=minmax[1],title="median("+col+")",**kwargs)
     plt.show()
     return skyMap
 
 
-def densitymap(df,minmax=None):
+def densitymap(df,minmax=None,**kwargs):
     df_map=df.select("ipix").groupBy("ipix").count()
     df_map=df_map.withColumn("density",df_map['count']/pixarea).drop("count")
 
@@ -159,14 +159,14 @@ def densitymap(df,minmax=None):
     
     if minmax==None:
         minmax=(np.max([0,mu-2*sig]),mu+2*sig)
-    hp.gnomview(skyMap,rot=[55,-29.8],reso=reso,min=minmax[0],max=minmax[1],title=r"$density/arcmin^2$")
+    hp.gnomview(skyMap,reso=reso,min=minmax[0],max=minmax[1],title=r"$density/arcmin^2$",**kwargs)
     plt.show()
 
 
 def add_healpixels(df,ra="ra",dec="dec"):
     assert ra in df.columns
     assert dec in df.columns
-    print("NSIDE={}, pixel area={} arcmin^2, resolution={} arcmin".format(nside,pixaread,reso))
+    print("NSIDE={}, pixel area={} arcmin^2, resolution={} arcmin".format(nside,pixarea,reso))
     spark = SparkSession.builder.getOrCreate()
     spark.sparkContext.broadcast(nside) 
     df=df.withColumn("ipix",Ang2Pix("ra","dec"))
