@@ -42,8 +42,8 @@ df_all.printSchema()
 df=df_all.filter(df_all.halo_id>0)
 
 #SELECTION
-cols="halo_id,ra,dec,redshift,position_x,position_y,position_z,size_true,stellar_mass"
-#bands=['u','g','r','i','z','y']
+cols="halo_id,ra,dec,redshift,stellar_mass,size_true"
+bands=['u','g','r','i','z','y']
 #for b in bands:
 #    s=",mag_{0}".format(b)
 #    cols+=s
