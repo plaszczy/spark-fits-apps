@@ -42,13 +42,15 @@ df_all.printSchema()
 df=df_all.filter(df_all.halo_id>0)
 
 #SELECTION
-cols="halo_id,ra,dec,redshift,stellar_mass,size_true"
+cols="halo_id,ra,dec,redshift,mag_u,mag_true_u"
 bands=['u','g','r','i','z','y']
 #for b in bands:
 #    s=",mag_{0}".format(b)
 #    cols+=s
 #use these columns
-df=df.select(cols.split(','))
+
+#df=df.select(cols.split(','))
+df=df.select("halo_id","ra","dec",(F.pow(F.lit(10.),(F.col("mag_true_u")-F.col("mag_u"))/F.lit(2.5))).alias("magnification"))
 
 
 print("After selection=")
@@ -61,7 +63,6 @@ df=add_healpixels(df)
 
 
 #fileter
-#df=df.filter(df.ipix==38188148)
 
 #CACHE
 print("caching...")
