@@ -41,17 +41,20 @@ df_all.printSchema()
 #FILTER
 df=df_all.filter(df_all.halo_id>0)
 
+
 #SELECTION
-cols="halo_id,ra,dec,redshift,mag_u,mag_true_u"
+cols="halo_id,ra,dec,redshift,Mag_true_g_lsst_z0"
+
 bands=['u','g','r','i','z','y']
-#for b in bands:
-#    s=",mag_{0}".format(b)
-#    cols+=s
+for b in bands:
+    s=",mag_{0}".format(b)
+    cols+=s
 #use these columns
+df=df.select(cols.split(','))
 
-#df=df.select(cols.split(','))
-df=df.select("halo_id","ra","dec",(F.pow(F.lit(10.),(F.col("mag_true_u")-F.col("mag_u"))/F.lit(2.5))).alias("magnification"))
+#df=df.select("halo_id","ra","dec",(F.pow(F.lit(10.),(F.col("mag_true_u")-F.col("mag_u"))/F.lit(2.5))).alias("magnification"))
 
+colbands=['b','g','r','y','m','k']
 
 print("After selection=")
 df.printSchema()
@@ -62,7 +65,9 @@ print('add healpixels')
 df=add_healpixels(df)
 
 
-#fileter
+#re-filter
+#df=df.sample(0.01)
+
 
 #CACHE
 print("caching...")
