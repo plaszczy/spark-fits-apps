@@ -43,11 +43,13 @@ df=df_all.filter(df_all.halo_id>0)
 
 
 #SELECTION
-cols="halo_id,ra,dec,redshift,Mag_true_g_lsst_z0"
+#cols="halo_id,ra,dec,redshift,Mag_true_g_lsst_z0,Mag_true_r_lsst_z0"
 
-bands=['u','g','r','i','z','y']
+cols="halo_id,redshift,Mag_true_g_lsst_z0,Mag_true_r_lsst_z0,Mag_true_i_lsst_z0"
+#bands=['u','g','r','i','z','y']
+bands=['g','r']
 for b in bands:
-    s=",mag_{0}".format(b)
+    s=",mag_{0},mag_true_{0}".format(b)
     cols+=s
 #use these columns
 df=df.select(cols.split(','))
@@ -56,14 +58,25 @@ df=df.select(cols.split(','))
 
 colbands=['b','g','r','y','m','k']
 
+
+# ADD HEALPIXELS
+#print('add healpixels')
+#df=add_healpixels(df)
+
+df=df.withColumn("g-r",df.mag_g-df.mag_r)
+
+df=df.withColumnRenamed("Mag_true_r_lsst_z0","Mr")
+df=df.withColumnRenamed("Mag_true_g_lsst_z0","Mg")
+
+#cosmo
+df=df.withColumn("m-M",df.mag_r-df.Mr)
+df=df.withColumn("m_true-M",df.mag_true_r-df.Mr)
+df=df.withColumn("log10z",F.log10(df.redshift))
+
+
 print("After selection=")
 df.printSchema()
 print("#VARIABLES={} out of {} ({:3.1f}%)".format(len(df.columns),len(df_all.columns),float(len(df.columns))/len(df_all.columns)*100))
-
-# ADD HEALPIXELS
-print('add healpixels')
-df=add_healpixels(df)
-
 
 #re-filter
 #df=df.sample(0.01)

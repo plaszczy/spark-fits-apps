@@ -36,5 +36,7 @@ pix= df.filter(df.magnification>3).groupby("ipix").count().toPandas()
 radec=hp.pix2ang(4096,pix.ipix.values,lonlat=True)
 np.sort(radec[0])
 
-
 hp.gnomview(m,rot=[50.14160156,-31.15903841],xsize=100,cmap='hot')
+
+#colormag
+
