@@ -103,4 +103,4 @@ def df_histplot2(df,col1,col2,Nbin1=50,Nbin2=50,bounds=None,newfig=True,**kwargs
     plt.xlabel(col1)
     plt.ylabel(col2)
     plt.show()
-    return xx,yy,m
+    return xx,yy,m.T

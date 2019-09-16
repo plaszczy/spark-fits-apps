@@ -6,7 +6,7 @@ import pandas as pd
 import healpy as hp
 from matplotlib import pyplot as plt
 
-nside=4096
+nside=1024
 
 pixarea=hp.nside2pixarea(nside, degrees=True)*3600
 reso= hp.nside2resol(nside,arcmin=True)
@@ -187,7 +187,7 @@ def densitymap(df,minmax=None,**kwargs):
     N=int(r[0][0])
     mu=float(r[1][0])
     sig=float(r[2][0])
-    map_p=df_map.toPandas()
+
     #now data is reduced create the healpy map
     skyMap= np.full(hp.nside2npix(nside),hp.UNSEEN)
     skyMap[map_p['ipix'].values]=map_p[var].values

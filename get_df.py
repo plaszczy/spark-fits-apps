@@ -43,13 +43,11 @@ df=df_all.filter(df_all.halo_id>0)
 
 
 #SELECTION
-#cols="halo_id,ra,dec,redshift,Mag_true_g_lsst_z0,Mag_true_r_lsst_z0"
-
-cols="halo_id,redshift,Mag_true_g_lsst_z0,Mag_true_r_lsst_z0,Mag_true_i_lsst_z0"
+cols="halo_id,ra,dec,redshift,size_true"
 #bands=['u','g','r','i','z','y']
 bands=['g','r']
 for b in bands:
-    s=",mag_{0},mag_true_{0}".format(b)
+    s=",mag_{0},Mag_true_{0}_lsst_z0".format(b)
     cols+=s
 #use these columns
 df=df.select(cols.split(','))
@@ -60,8 +58,8 @@ colbands=['b','g','r','y','m','k']
 
 
 # ADD HEALPIXELS
-#print('add healpixels')
-#df=add_healpixels(df)
+print('add healpixels')
+df=add_healpixels(df)
 
 df=df.withColumn("g-r",df.mag_g-df.mag_r)
 
@@ -70,7 +68,6 @@ df=df.withColumnRenamed("Mag_true_g_lsst_z0","Mg")
 
 #cosmo
 df=df.withColumn("m-M",df.mag_r-df.Mr)
-df=df.withColumn("m_true-M",df.mag_true_r-df.Mr)
 df=df.withColumn("log10z",F.log10(df.redshift))
 
 
@@ -89,3 +86,6 @@ df=df.cache()
 print("size={} M".format(df.count()/1e6))
 
 timer.stop()
+
+#cosmodc2
+rot=[61.81579482165925,-35.20157446022967]
