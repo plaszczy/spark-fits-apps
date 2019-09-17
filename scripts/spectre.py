@@ -82,5 +82,6 @@ plt.tight_layout()
 
 
 
-#shot noise
-clsn=L2/Ntot
+#shot noise (1/Nbar=4pi/Ntot=L2/Ntot)
+
+clsn=L2/sum(p['count'])
