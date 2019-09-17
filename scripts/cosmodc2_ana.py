@@ -71,31 +71,32 @@ for i in range(0,500):
 
 
 #spectre
-# z=1 et cut m?
-df_map=df.filter(df.redshift.between(0.95,1.05)).select("ipix").groupBy("ipix").count()
+zcut=[0.9,1.1]
+df_map=df.filter(df.redshift.between(zcut[0],zcut[1])).select("ipix").groupBy("ipix").count()
 p=df_map.toPandas()
 m=np.mean(p['count'])
-
+print("Nbar={}".format(m))
 skyMap= np.full(hp.nside2npix(nside),hp.UNSEEN)
-
 skyMap[p['ipix'].values]=p['count'].values/m-1.
 
 
-
-N=200
+N=150
 hp.gnomview(skyMap,rot=rot,reso=reso,xsize=N)
-
 c=hp.gnomview(skyMap,rot=rot,reso=reso,xsize=N,return_projected_map=True)
 
 
-Ldeg=13.5
-L=deg2rad(Ldeg)
+#Ldeg=13.5
+Ldeg=np.sqrt(pixarea)*N/60
+print("L={} deg".format(Ldeg))
+
+L=np.deg2rad(Ldeg)
 area=L*L
 
-k0=2*pi/L
+k0=2*np.pi/L
 
-kmax=k0*N/2*sqrt(2)
+kmax=k0*N/2*np.sqrt(2)
 
+print("k0={} kmax={}".format(k0,kmax))
 img=c.data
 
 from scipy import fftpack

@@ -7,7 +7,7 @@ matplotlib.rcParams['image.interpolation']='nearest'
 matplotlib.rcParams['image.cmap'] = 'jet' 
 import matplotlib.pyplot as plt
 
-def minmax(df,col):
+def df_minmax(df,col):
     return df.select(F.min(col),F.max(col)).first()
 
 def num_nans(df,col=None):
@@ -31,7 +31,7 @@ def df_hist(df,col,Nbins=50,bounds=None):
     df=df.select(col).na.drop()
 
     if (bounds==None) :
-        m=minmax(df,col)
+        m=df_minmax(df,col)
         print("{} : min/max=[{},{}]".format(col,m[0],m[1]))
         zmin=m[0]
         zmax=m[1]
