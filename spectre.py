@@ -120,4 +120,5 @@ plt.tight_layout()
 #biais
 plt.figure()
 ck=interp(kmean,t.ell,t.cl00)
-plt.plot(kmean,(psmean-1/Nbar)/ck,label="{}<z<{}".format(zcut[0],zcut[1]))
+#plt.plot(kmean,(psmean-1/Nbar)/ck,label="{}<z<{}".format(zcut[0],zcut[1]))
+plt.errorbar(kmean,(psmean-1/Nbar)/ck,yerr=stdps,xerr=25,fmt='o',c='k',label='bias')
