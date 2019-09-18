@@ -43,7 +43,7 @@ df=df_all.filter(df_all.halo_id>0)
 
 
 #SELECTION
-cols="halo_id,ra,dec,redshift,size_true"
+cols="halo_id,ra,dec,redshift,stellar_mass,is_central"
 #bands=['u','g','r','i','z','y']
 bands=['g','r']
 for b in bands:

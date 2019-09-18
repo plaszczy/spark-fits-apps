@@ -11,22 +11,26 @@ import healpy as hp
 #reso= hp.nside2resol(nside,arcmin=True)
 #print("nside={}".format(nside))
 
+zmean=0.5
+dz=0.1
 
-zcut=[0.9,1.1]
-angpow='dc2_z1_smooth.fits'
+zcut=[zmean-dz,zmean+dz]
+angpow="dc2_z{}_smooth.fits".format(zmean)
 
-df_map=df.filter(df.redshift.between(zcut[0],zcut[1])).select("ipix").groupBy("ipix").count()
+df_high=df.filter((F.log10("stellar_mass")>10.5) & (df.is_central==True))
+df_map=df_high.filter(df.redshift.between(zcut[0],zcut[1])).select("ipix").groupBy("ipix").count()
+
+
+
 p=df_map.toPandas()
-Ntot=sum(p['count'])
-Nmean=mean(p['count'])
-
-print("Ntot={}M Nmean/pix={}".format(Ntot,Nmean))
-
+#sans rescale
 skyMap= full(hp.nside2npix(nside),hp.UNSEEN)
-skyMap[p['ipix'].values]=p['count'].values/Nmean-1.
+skyMap[p['ipix'].values]=p['count'].values
 
 
+#gnome proj (rot,reso,pixarea)
 Npix=150
+
 #Ldeg=13.5
 Ldeg=sqrt(pixarea)*Npix/60
 print("L={} deg".format(Ldeg))
@@ -37,8 +41,21 @@ k0=2*pi/L
 kmax=k0*Npix/2
 print("k0={} kmax={}".format(k0,kmax))
 
-c=hp.gnomview(skyMap,rot=rot,reso=reso,xsize=Npix,return_projected_map=True)
-img=c.data
+c=hp.gnomview(skyMap,rot=rot,reso=reso,xsize=Npix,return_projected_map=True,fig=1)
+
+
+assert c.mask.sum()==0
+Nmean=c.data.mean()
+Ntot=c.data.sum()
+#rescale
+img=c.data/Nmean-1.
+
+dens=Ntot/Ldeg**2/3600
+print("mean density on patch={} gals/arcmin**2".format(dens))
+
+#in correct units
+Nbar=Ntot/L2
+
 
 #2D
 #window
@@ -56,13 +73,13 @@ psd=abs(F2)**2/w2*L2
 
 freq=fftshift(fftfreq(Npix)*Npix*k0)
 
-plt.figure()
-plt.pcolormesh(freq,freq,psd,vmax=1e-6)
-plt.colorbar()
-plt.title("{}<z<{}".format(zcut[0],zcut[1]))
-plt.xlabel(r"$\ell_x$")
-plt.ylabel(r"$\ell_y$")
-plt.tight_layout()
+## plt.figure()
+## plt.pcolormesh(freq,freq,psd,vmax=1e-6)
+## plt.colorbar()
+## plt.title("{}<z<{}".format(zcut[0],zcut[1]))
+## plt.xlabel(r"$\ell_x$")
+## plt.ylabel(r"$\ell_y$")
+## plt.tight_layout()
 
 
 #1D##########
@@ -75,27 +92,32 @@ kbin=arange(0,kmax,50)
 
 
 kmean=[]
-stdmean=[]
 psmean=[]
 stdps=[]
 for k1,k2 in zip(kbin[0:-1],roll(kbin,-1)):
     w=where(logical_and(kmap>k1,kmap<k2))
     kmean.append(mean(kmap[w].flat))
-    stdmean.append(std(kmap[w].flat))
     psmean.append(mean(psd[w].flat))
     stdps.append(std(psd[w].flat))
+#
+kmean=array(kmean)
+psmean=array(psmean)
+stdps=array(stdps)
 
-#shot noise (1/Nbar=4pi/Ntot=L2/Ntot)
-clsn=4*pi/Ntot
-
-#angpow
 
 plt.figure()
-t=tools.mrdfits(angpow,1)
+t=tools.mrdfits(angpow,1,silent=True)
 plt.plot(t.ell,t.cl00,'r',label='AngPow')
-plt.errorbar(kmean,array(psmean),yerr=stdps,xerr=25,fmt='o',c='k',label='cosmoDC2')
+plt.errorbar(kmean,psmean-1/Nbar,yerr=stdps,xerr=25,fmt='o',c='k',label='cosmoDC2')
 plt.xlabel(r"$\ell$")
 plt.ylabel(r"$C_\ell$")
 plt.title("{}<z<{}".format(zcut[0],zcut[1]))
-tools.ax0()
+#plt.axhline(1/Nbar,c='k',lw=0.5)
+plt.xlim(0,kmax)
+plt.legend()
 plt.tight_layout()
+
+#biais
+plt.figure()
+ck=interp(kmean,t.ell,t.cl00)
+plt.plot(kmean,(psmean-1/Nbar)/ck,label="{}<z<{}".format(zcut[0],zcut[1]))
