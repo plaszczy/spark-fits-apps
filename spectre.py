@@ -2,26 +2,33 @@ from numpy import *
 from numpy.fft import fft2,fftshift,fftfreq
 import pandas as pd
 import tools
+import healpy as hp
+
+#cosmodc2
+#rot=[61.81579482165925,-35.20157446022967]
+#nside=512
+#pixarea=hp.nside2pixarea(nside, degrees=True)*3600
+#reso= hp.nside2resol(nside,arcmin=True)
+#print("nside={}".format(nside))
 
 
 zcut=[0.9,1.1]
 angpow='dc2_z1_smooth.fits'
 
-#df_map=df.filter(df.redshift.between(zcut[0],zcut[1])).select("ipix").groupBy("ipix").count()
-#p=df_map.toPandas()
-
+df_map=df.filter(df.redshift.between(zcut[0],zcut[1])).select("ipix").groupBy("ipix").count()
+p=df_map.toPandas()
 Ntot=sum(p['count'])
 Nmean=mean(p['count'])
 
-print("nside={}".format(nside))
 print("Ntot={}M Nmean/pix={}".format(Ntot,Nmean))
+
 skyMap= full(hp.nside2npix(nside),hp.UNSEEN)
 skyMap[p['ipix'].values]=p['count'].values/Nmean-1.
 
 
 Npix=150
 #Ldeg=13.5
-#Ldeg=sqrt(pixarea)*Npix/60
+Ldeg=sqrt(pixarea)*Npix/60
 print("L={} deg".format(Ldeg))
 L=deg2rad(Ldeg)
 L2=L*L
@@ -82,12 +89,11 @@ for k1,k2 in zip(kbin[0:-1],roll(kbin,-1)):
 clsn=4*pi/Ntot
 
 #angpow
-t=tools.mrdfits('dc2_z1_smooth.fits',1)
 
 plt.figure()
 t=tools.mrdfits(angpow,1)
 plt.plot(t.ell,t.cl00,'r',label='AngPow')
-plt.errorbar(kmean,array(psmean),yerr=stdps,xerr=stdmean,fmt='o',c='k',label='cosmoDC2')
+plt.errorbar(kmean,array(psmean),yerr=stdps,xerr=25,fmt='o',c='k',label='cosmoDC2')
 plt.xlabel(r"$\ell$")
 plt.ylabel(r"$C_\ell$")
 plt.title("{}<z<{}".format(zcut[0],zcut[1]))
