@@ -11,13 +11,16 @@ import healpy as hp
 #reso= hp.nside2resol(nside,arcmin=True)
 #print("nside={}".format(nside))
 
-zmean=0.5
-dz=0.1
+zmean=0.75
+dz=0.25
 
 zcut=[zmean-dz,zmean+dz]
 angpow="dc2_z{}_smooth.fits".format(zmean)
 
-df_high=df.filter((F.log10("stellar_mass")>10.5) & (df.is_central==True))
+df_high=df.filter((df["g-r"]>1.2)& (df['Mr']<-20))
+#df_high=df.filter((F.log10("stellar_mass")>10.5))
+
+
 df_map=df_high.filter(df.redshift.between(zcut[0],zcut[1])).select("ipix").groupBy("ipix").count()
 
 
@@ -121,4 +124,21 @@ plt.tight_layout()
 plt.figure()
 ck=interp(kmean,t.ell,t.cl00)
 #plt.plot(kmean,(psmean-1/Nbar)/ck,label="{}<z<{}".format(zcut[0],zcut[1]))
-plt.errorbar(kmean,(psmean-1/Nbar)/ck,yerr=stdps,xerr=25,fmt='o',c='k',label='bias')
+plt.errorbar(kmean,(psmean-1/Nbar)/ck,yerr=stdps/ck,xerr=25,fmt='o',c='k',label='bias')
+plt.xlabel(r"$\ell$")
+plt.ylabel(r"$\hat C_\ell/C_\ell^{th}$")
+plt.title("{}<z<{}".format(zcut[0],zcut[1]))
+plt.tight_layout()
+
+b2=(psmean[1:]-1/Nbar)/ck[1:]
+sigb2=stdps[1:]/ck[1:]
+wi=1/sigb2**2
+meanb2=sum(wi*b2)/sum(wi)
+sigmeanb2=sqrt(1/sum(wi))
+
+
+plt.fill_between([0,kmax],[meanb2-sigmeanb2,meanb2-sigmeanb2],[meanb2+sigmeanb2,meanb2+sigmeanb2],color='green',alpha=0.5)
+
+txt=r"$b^2={:2.2f}\pm{:2.2f}$".format(meanb2,sigmeanb2)
+plt.text(0.1,0.3,txt,transform=plt.gca().transAxes,color='green', fontsize=12)
+

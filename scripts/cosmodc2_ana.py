@@ -44,24 +44,29 @@ hp.gnomview(m,rot=[50.14160156,-31.15903841],xsize=100,cmap='hot')
 
 #cosmo
 
-h=df_histplot2(df,"log10z","m-M",Nbin1=500,Nbin2=500)
+Nbins=500
+hist=df_histplot2(df,"log10z","m-M",Nbin1=Nbins,Nbin2=Nbins)
 
-lz=h[0]
-mm=h[1]
+lz=hist[0]
+mm=hist[1]
 
 step=(mm-np.roll(mm,1))[-1]
 mmin=mm[0]
 
-omegaM=0.3
-omegaL=0.7
-H0=70.
+omega_b=0.02258
+omega_cdm=0.1109
+h=0.71
+
+omegaM=(omega_b+omega_cdm)/h**2
+omegaL=1-omegaM
+H0=h*100
 c=300000.
 
 q0=omegaM/2-omegaL
 
 
-val=h[2]
-for i in range(0,500):
+val=hist[2]
+for i in range(0,Nbins):
     l=lz[i]
     s=25-5*np.log10(H0)+5*np.log10(c)+5*l+1.086*(1.-q0)*10**l
     j=int((s-mmin-step/2)/step)
