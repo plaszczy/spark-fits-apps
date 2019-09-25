@@ -6,7 +6,7 @@ import pandas as pd
 import healpy as hp
 from matplotlib import pyplot as plt
 
-nside=512
+nside=1024
 
 pixarea=hp.nside2pixarea(nside, degrees=True)*3600
 reso= hp.nside2resol(nside,arcmin=True)
@@ -196,7 +196,7 @@ def densitymap(df,minmax=None,**kwargs):
         minmax=(np.max([0,mu-2*sig]),mu+2*sig)
     hp.gnomview(skyMap,reso=reso,min=minmax[0],max=minmax[1],title=r"$density/arcmin^2$",**kwargs)
     plt.show()
-
+    return skyMap
 
 def add_healpixels(df,ra="ra",dec="dec"):
     assert ra in df.columns

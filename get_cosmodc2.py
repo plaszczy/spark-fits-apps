@@ -45,7 +45,7 @@ df=df_all.filter(df_all.halo_id>0)
 #SELECTION
 cols="halo_id,ra,dec,redshift,stellar_mass,is_central"
 #bands=['u','g','r','i','z','y']
-bands=['g','r']
+bands=['i']
 for b in bands:
     s=",mag_{0},Mag_true_{0}_lsst_z0".format(b)
     cols+=s
@@ -61,14 +61,13 @@ colbands=['b','g','r','y','m','k']
 print('add healpixels')
 df=add_healpixels(df)
 
-df=df.withColumn("g-r",df.mag_g-df.mag_r)
-
-df=df.withColumnRenamed("Mag_true_r_lsst_z0","Mr")
-df=df.withColumnRenamed("Mag_true_g_lsst_z0","Mg")
+#df=df.withColumn("g-r",df.mag_g-df.mag_r)
+#df=df.withColumnRenamed("Mag_true_r_lsst_z0","Mr")
+#df=df.withColumnRenamed("Mag_true_g_lsst_z0","Mg")
 
 #cosmo
-df=df.withColumn("m-M",df.mag_r-df.Mr)
-df=df.withColumn("log10z",F.log10(df.redshift))
+#df=df.withColumn("m-M",df.mag_r-df.Mr)
+#df=df.withColumn("log10z",F.log10(df.redshift))
 
 
 print("After selection=")
@@ -88,4 +87,4 @@ print("size={} M".format(df.count()/1e6))
 timer.stop()
 
 #cosmodc2
-rot=[61.81579482165925,-35.20157446022967]
+#rot=[61.81579482165925,-35.20157446022967]

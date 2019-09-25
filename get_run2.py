@@ -32,27 +32,25 @@ logger.LogManager.getLogger("akka").setLevel(level)
 timer=Timer()
 #
 timer.start()
-ff=os.environ['COSMODC2']
+ff=os.environ['RUN2']
 print("input={}".format(ff))
 df_all=spark.read.parquet(ff)
 print("#partitions={}".format(df_all.rdd.getNumPartitions()))
 df_all.printSchema()
 
+
 #FILTER
-df=df_all.filter(df_all.halo_id>0)
+df=df_all.filter((df_all.good==1)&(df_all.clean==1))
 
-
-#SELECTION
-cols="halo_id,ra,dec,redshift,stellar_mass,is_central"
-#bands=['u','g','r','i','z','y']
-bands=['g','r']
-for b in bands:
-    s=",mag_{0},Mag_true_{0}_lsst_z0".format(b)
+#COLUMNS
+cols="tract,patch,ra,dec,extendedness,blendedness"
+for b in ['u','g','r','i','z','y']:
+    s=",psFlux_flag_{0},psFlux_{0},psFluxErr_{0},mag_{0}_cModel,magerr_{0}_cModel,snr_{0}_cModel".format(b)
     cols+=s
+print(cols)
+
 #use these columns
 df=df.select(cols.split(','))
-
-#df=df.select("halo_id","ra","dec",(F.pow(F.lit(10.),(F.col("mag_true_u")-F.col("mag_u"))/F.lit(2.5))).alias("magnification"))
 
 colbands=['b','g','r','y','m','k']
 
@@ -60,15 +58,6 @@ colbands=['b','g','r','y','m','k']
 # ADD HEALPIXELS
 print('add healpixels')
 df=add_healpixels(df)
-
-df=df.withColumn("g-r",df.mag_g-df.mag_r)
-
-df=df.withColumnRenamed("Mag_true_r_lsst_z0","Mr")
-df=df.withColumnRenamed("Mag_true_g_lsst_z0","Mg")
-
-#cosmo
-df=df.withColumn("m-M",df.mag_r-df.Mr)
-df=df.withColumn("log10z",F.log10(df.redshift))
 
 
 print("After selection=")
@@ -78,14 +67,24 @@ print("#VARIABLES={} out of {} ({:3.1f}%)".format(len(df.columns),len(df_all.col
 #re-filter
 #df=df.sample(0.01)
 
+gal=df.filter(df.extendedness==1)
+
+band="i"
+cols="ipix,blendedness,psFlux_{0},psFluxErr_{0},mag_{0}_cModel,magerr_{0}_cModel,snr_{0}_cModel".format(band)
+i=gal.filter(df["psFlux_flag_{}".format(band)]==False).select(cols.split(",")).na.drop()
+iqual=i.filter((i['blendedness']<10**(-0.375)) & (i['snr_i_cModel']>5))
+
+i24=iqual.filter(iqual.mag_i_cModel<24)
 
 #CACHE
 print("caching...")
 df=df.cache()
 
-print("size={} M".format(df.count()/1e6))
+print("tot size={} M, gals={}".format(df.count()/1e6,gal.count()/1e6))
+print("i size={} M, i<24={}".format(i.count()/1e6,i24.count()/1e6))
+
 
 timer.stop()
 
-#cosmodc2
-rot=[61.81579482165925,-35.20157446022967]
+#centre
+rot=[61.89355123721637,-36.006714393702175]
