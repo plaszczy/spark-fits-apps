@@ -2,7 +2,7 @@ from numpy import *
 import pandas as pd
 import tools
 import healpy as hp
-from patch_spectrum import patch_spectrum
+import patch
 
 
 ##creation map
@@ -29,21 +29,14 @@ skyMap[p['ipix'].values]=p['count'].values
 
 #gnome proj 
 Npix=110
-L=deg2rad(sqrt(pixarea)*Npix/60)
 
-
-k0=2*pi/L
-kmax=k0*Npix/2
-print("k0={} kmax={}".format(k0,kmax))
-
-
-#proj dans rot
 c=hp.gnomview(skyMap,rot=rot,reso=reso,xsize=Npix,return_projected_map=True)
-
-
 assert c.mask.sum()==0
 
-k,ps,stdps=patch_spectrum(c.data,L)
+img=c.data
+
+L=deg2rad(sqrt(pixarea)*Npix/60)
+k,ps,stdps=patch.autospec(img,L)
 
 
 plt.figure()
