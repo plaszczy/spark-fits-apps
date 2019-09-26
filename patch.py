@@ -13,7 +13,7 @@ def patch_spectrum(c,L,bink=50):
 
     #modes
     k0=2*pi/L
-    kmax=k0*Npix/2
+    kmax=k0*min([Nx,Ny])/2
     print("k0={} kmax={}".format(k0,kmax))
 
     Nmean=c.mean()

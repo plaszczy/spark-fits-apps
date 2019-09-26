@@ -6,7 +6,7 @@ import pandas as pd
 import healpy as hp
 from matplotlib import pyplot as plt
 
-nside=1024
+nside=512
 
 pixarea=hp.nside2pixarea(nside, degrees=True)*3600
 reso= hp.nside2resol(nside,arcmin=True)

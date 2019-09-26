@@ -19,7 +19,7 @@ from patch_spectrum import patch_spectrum
 #filter
 dfcut=df.filter(...)
 
-df_map=df.dfcut.select("ipix").groupBy("ipix").count()
+df_map=dfcut.select("ipix").groupBy("ipix").count()
 
 p=df_map.toPandas()
 #sans rescale
@@ -28,8 +28,8 @@ skyMap[p['ipix'].values]=p['count'].values
 
 
 #gnome proj 
-Npix=200
-Ldeg=deg2rad(sqrt(pixarea)*Npix/60)
+Npix=110
+L=deg2rad(sqrt(pixarea)*Npix/60)
 
 
 k0=2*pi/L
@@ -49,7 +49,7 @@ k,ps,stdps=patch_spectrum(c.data,L)
 plt.figure()
 t=tools.mrdfits(angpow,1,silent=True)
 plt.plot(t.ell,t.cl00,'r',label='AngPow')
-plt.errorbar(kmean,psmean-1/Nbar,yerr=stdps,xerr=25,fmt='o',c='k',label='cosmoDC2')
+plt.errorbar(k,ps,yerr=stdps,xerr=25,fmt='o',c='k',label='run2.1.1i')
 plt.xlabel(r"$\ell$")
 plt.ylabel(r"$C_\ell$")
 plt.title("{}<z<{}".format(zcut[0],zcut[1]))
