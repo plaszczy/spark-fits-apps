@@ -28,14 +28,18 @@ skyMap[p['ipix'].values]=p['count'].values
 
 
 #gnome proj 
-Npix=110
+Npix=250
+cen=[61.8,-37.2]
 
-c=hp.gnomview(skyMap,rot=rot,reso=reso,xsize=Npix,return_projected_map=True)
+Ldeg=sqrt(pixarea)*Npix/60
+L=deg2rad(Ldeg)
+print("angsize={} deg".format(Ldeg))
+
+c=hp.gnomview(skyMap,rot=cen,reso=reso,xsize=Npix,return_projected_map=True,min=100,max=300)
 assert c.mask.sum()==0
 
 img=c.data
 
-L=deg2rad(sqrt(pixarea)*Npix/60)
 k,ps,stdps=patch.autospec(img,L)
 
 

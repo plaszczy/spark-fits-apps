@@ -52,23 +52,21 @@ for b in bands:
 #use these columns
 df=df.select(cols.split(','))
 
-#df=df.select("halo_id","ra","dec",(F.pow(F.lit(10.),(F.col("mag_true_u")-F.col("mag_u"))/F.lit(2.5))).alias("magnification"))
+# renommage
+for b in bands:
+    df=df.withColumnRenamed("Mag_true_{}_lsst_z0".format(b),"M{}".format(b))
 
 colbands=['b','g','r','y','m','k']
-
 
 # ADD HEALPIXELS
 print('add healpixels')
 df=add_healpixels(df)
 
+# nouvelles vars
 #df=df.withColumn("g-r",df.mag_g-df.mag_r)
-#df=df.withColumnRenamed("Mag_true_r_lsst_z0","Mr")
-#df=df.withColumnRenamed("Mag_true_g_lsst_z0","Mg")
-
-#cosmo
 #df=df.withColumn("m-M",df.mag_r-df.Mr)
 #df=df.withColumn("log10z",F.log10(df.redshift))
-
+#df=df.withColumn("log10(Mstar)",F.log10(df.stellar_mass)).drop('stellar_mass')
 
 print("After selection=")
 df.printSchema()
@@ -77,12 +75,15 @@ print("#VARIABLES={} out of {} ({:3.1f}%)".format(len(df.columns),len(df_all.col
 #re-filter
 #df=df.sample(0.01)
 
-
 #CACHE
-print("caching...")
-df=df.cache()
+#print("caching...")
+#df=df.cache()
 
-print("size={} M".format(df.count()/1e6))
+itrue24=df.filter(df.mag_i<24).cache()
+
+print("size={} M".format(itrue24.count()/1e6))
+
+
 
 timer.stop()
 

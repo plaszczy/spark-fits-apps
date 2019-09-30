@@ -44,7 +44,8 @@ df=df_all.filter((df_all.good==1)&(df_all.clean==1))
 
 #COLUMNS
 cols="tract,patch,ra,dec,extendedness,blendedness"
-for b in ['u','g','r','i','z','y']:
+for b in ['i']:
+#for b in ['u','g','r','i','z','y']:
     s=",psFlux_flag_{0},psFlux_{0},psFluxErr_{0},mag_{0}_cModel,magerr_{0}_cModel,snr_{0}_cModel".format(b)
     cols+=s
 print(cols)

@@ -35,9 +35,6 @@ def df_hist(df,col,Nbins=50,bounds=None):
         print("{} : min/max=[{},{}]".format(col,m[0],m[1]))
         zmin=m[0]
         zmax=m[1]
-        #extend to avoid border effects
-        zmin-=(m[1]-m[0])*1e-6
-        zmax+=(m[1]-m[0])*1e-6
     else:
         zmin=bounds[0] 
         zmax=bounds[1]
@@ -47,7 +44,8 @@ def df_hist(df,col,Nbins=50,bounds=None):
     zbin=df.select(((df[col]-F.lit(zmin))/dz).cast(IntegerType()).alias('bin'))
 
     h=zbin.groupBy("bin").count().orderBy(F.asc("bin"))
-    return h.select("bin",(F.lit(zmin+dz/2)+h['bin']*dz).alias('loc'),"count").drop("bin").toPandas(),dz
+    return h.select("bin",(F.lit(zmin+dz/2)+h['bin']*dz).alias('loc'),"count").filter(h['bin']!=Nbins)\
+      .drop("bin").toPandas(),dz
 
 
 def df_histplot(df,col,Nbins=50,bounds=None,doStat=False):    
@@ -73,6 +71,9 @@ def df_histplot(df,col,Nbins=50,bounds=None,doStat=False):
     return hp
 
 def df_histplot2(df,col1,col2,Nbin1=50,Nbin2=50,bounds=None,newfig=True,**kwargs):
+
+    df=df.select(col1,col2).na.drop()
+
     if (bounds==None) :
         b=df.select(F.min(col1),F.max(col1),F.min(col2),F.max(col2)).first()
         zmin1=b[0]
@@ -84,8 +85,8 @@ def df_histplot2(df,col1,col2,Nbin1=50,Nbin2=50,bounds=None,newfig=True,**kwargs
         zmin2=b[2]
         zmax2=b[3]
         r2=zmax2-zmin2
-        zmin1-=r2*1e-6
-        zmax1+=r2*1e-6
+        zmin2-=r2*1e-6
+        zmax2+=r2*1e-6
     else:
         zmin1=bounds[0][0]
         zmax1=bounds[0][1]
@@ -97,17 +98,14 @@ def df_histplot2(df,col1,col2,Nbin1=50,Nbin2=50,bounds=None,newfig=True,**kwargs
     dz2=(zmax2-zmin2)/Nbin2
     
     #add bins columns    
-    zbin=df.withColumn("rbin1",(df[col1]-zmin1-dz1/2)/dz1)\
-      .select(F.bround("rbin1",0).cast(IntegerType()).alias('bin1'))\
-      .withColumn("rbin2",(df[col2]-zmin2-dz2/2)/dz2)\
-      .select(F.bround("rbin2",0).cast(IntegerType()).alias('bin2'))
 
-    zbin=df.select(((df[col1]-F.lit(zmin1))/dz1).cast(IntegerType()).alias('bin1'))\
-      .select(((df[col2]-F.lit(zmin2))/dz2).cast(IntegerType()).alias('bin2'))
+    zbin=df.select(((df[col1]-zmin1)/dz1).cast(IntegerType()).alias('bin1'),\
+                    ((df[col2]-zmin2)/dz2).cast(IntegerType()).alias('bin2'))
 
-    #count by bins
+    #bin
     h=zbin.groupBy("bin1","bin2").count()
-
+    # avoid upper bin on the right
+    h=h.filter((h['bin1']!=Nbin1) & ((h['bin2']!=Nbin2)))
     #plot
     hp=h.toPandas()
     m=np.zeros((Nbin1,Nbin2),dtype=int) 
