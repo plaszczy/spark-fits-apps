@@ -36,34 +36,30 @@ val Ang2pix=spark.udf.register("Ang2pix",(theta:Double,phi:Double)=>grid.index(t
 val pix_neighbours=spark.udf.register("pix_neighbours",(ipix:Long)=>grid.neighbours(ipix))
 
 
-//read DF
-
-val df_all=spark.read.parquet(System.getenv("RUN2")).select("ra","dec","mag_i")
+//SOURCE
+val df_all=spark.read.parquet(System.getenv("RUN2")).select($"ra".as("ra_s"),$"dec".as("dec_s"),$"mag_i".as("mag_i_s"))
 //val df_all=spark.read.parquet("run2_extrait.parquet")
 
+
 //filter
-val gold=df_all.filter($"mag_i"<25.3)
+val gold=df_all.filter($"mag_i_s"<25.3).withColumn("id_s",F.monotonically_increasing_id)
 
 
-//add theta/phi
-val df=gold.withColumn("theta",F.radians(F.lit(90)-F.col("dec"))).withColumn("phi",F.radians("ra"))
-
+//add healpixels
+val df=gold.withColumn("theta",F.radians(F.lit(90)-F.col("dec_s"))).withColumn("phi",F.radians("ra_s"))
 //ang2pix
-val dfpix=df.withColumn("ipix",Ang2pix($"theta",$"phi")).drop("theta","phi")
+var source=df.withColumn("ipix",Ang2pix($"theta",$"phi")).drop("theta","phi")
 
 
 //add neighbours
-val dfpixn=dfpix.withColumn("neighbours",pix_neighbours($"ipix"))
-
-println(dfpixn.cache().count)
-
-//create duplicates
-var dup=ArrayBuffer[org.apache.spark.sql.DataFrame]()
+val dfpixn=source.withColumn("neighbours",pix_neighbours($"ipix"))
+//create duplicates and add to source
 for (i <- 0 to 7) {
   println(i)
   val df1=dfpixn.drop("ipix").withColumn("ipix",$"neighbours"(i))
   val dfclean1=df1.filter(not(df1("ipix")===F.lit(-1))).drop("neighbours")
-  dup+=dfclean1
+  source=source.union(dfclean1)
 }
 
-val source=dfpixn.drop("neighbours").union(dup(0)).union(dup(1)).union(dup(2)).union(dup(3)).union(dup(4)).union(dup(5)).union(dup(6)).union(dup(7))
+//TARGET
+println("source=",source.cache().count)
