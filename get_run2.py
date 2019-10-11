@@ -39,14 +39,19 @@ print("#partitions={}".format(df_all.rdd.getNumPartitions()))
 df_all.printSchema()
 
 
-#FILTER
+#FILTER good
 df=df_all.filter((df_all.good==1)&(df_all.clean==1))
 
+#string match
+#[s for s in df_all.columns if "PSF" in s or "psf" in s]
+
+
+
 #COLUMNS
-cols="tract,patch,ra,dec,extendedness,blendedness"
+cols="ra,dec,extendedness,blendedness,IxxPSF_i,IxyPSF_i,psf_fwhm_i,IyyPSF_i"
 for b in ['i']:
 #for b in ['u','g','r','i','z','y']:
-    s=",psFlux_flag_{0},psFlux_{0},psFluxErr_{0},mag_{0}_cModel,magerr_{0}_cModel,snr_{0}_cModel".format(b)
+    s=",psFlux_flag_{0},psFlux_{0},psFluxErr_{0},mag_{0},mag_{0}_cModel,magerr_{0}_cModel,snr_{0}_cModel".format(b)
     cols+=s
 print(cols)
 
@@ -68,21 +73,28 @@ print("#VARIABLES={} out of {} ({:3.1f}%)".format(len(df.columns),len(df_all.col
 #re-filter
 #df=df.sample(0.01)
 
-gal=df.filter(df.extendedness==1)
+gal=df.filter(df.extendedness==1).drop("extendedness")
 
-band="i"
-cols="ipix,blendedness,psFlux_{0},psFluxErr_{0},mag_{0}_cModel,magerr_{0}_cModel,snr_{0}_cModel".format(band)
-i=gal.filter(df["psFlux_flag_{}".format(band)]==False).select(cols.split(",")).na.drop()
-iqual=i.filter((i['blendedness']<10**(-0.375)) & (i['snr_i_cModel']>5))
 
-i24=iqual.filter(iqual.mag_i_cModel<24)
+#i<24
+#band="i"
+#cols="ipix,blendedness,psFlux_{0},psFluxErr_{0},mag_{0}_cModel,magerr_{0}_cModel,snr_{0}_cModel".format(band)
+#i=gal.filter(df["psFlux_flag_{}".format(band)]==False).select(cols.split(",")).na.drop()
+#iqual=i.filter((i['blendedness']<10**(-0.375)) & (i['snr_i_cModel']>5))
+#i24=iqual.filter(iqual.mag_i_cModel<24)
+
+
+#gold
+gold=gal.select("ra","dec","mag_i","psFlux_i","psFluxErr_i",'psf_fwhm_i','IxxPSF_i','IxyPSF_i','IyyPSF_i').na.drop().filter("mag_i<25.3")
+gold_cModel=gal.select("ra","dec","mag_i_cModel","magerr_i_cModel","psFlux_i","psFluxErr_i",'psf_fwhm_i','IxxPSF_i','IxyPSF_i','IyyPSF_i').na.drop().filter("mag_i_cModel<25.3")
+
 
 #CACHE
 print("caching...")
 df=df.cache()
 
 print("tot size={} M, gals={}".format(df.count()/1e6,gal.count()/1e6))
-print("i size={} M, i<24={}".format(i.count()/1e6,i24.count()/1e6))
+#print("i size={} M, i<24={}".format(i.count()/1e6,i24.count()/1e6))
 
 
 timer.stop()
