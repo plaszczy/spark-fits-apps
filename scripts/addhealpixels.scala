@@ -6,6 +6,10 @@ import healpix.essentials.Scheme.NESTED
 
 import org.apache.spark.sql.functions.udf
 
+import scala.collection.mutable.ArrayBuffer
+
+
+
 class ExtPointing extends Pointing with java.io.Serializable
 case class Point2D(ra: Double, dec: Double)
 
@@ -51,5 +55,15 @@ val dfpix=df.withColumn("ipix",Ang2pix($"theta",$"phi")).drop("theta","phi")
 //add neighbours
 val dfpixn=dfpix.withColumn("neighbours",pix_neighbours($"ipix"))
 
-
 println(dfpixn.cache().count)
+
+//create duplicates
+var dup=ArrayBuffer[org.apache.spark.sql.DataFrame]()
+for (i <- 0 to 7) {
+  println(i)
+  val df1=dfpixn.drop("ipix").withColumn("ipix",$"neighbours"(i))
+  val dfclean1=df1.filter(not(df1("ipix")===F.lit(-1))).drop("neighbours")
+  dup+=dfclean1
+}
+
+val source=dfpixn.drop("neighbours").union(dup(0)).union(dup(1)).union(dup(2)).union(dup(3)).union(dup(4)).union(dup(5)).union(dup(6)).union(dup(7))
