@@ -39,11 +39,12 @@ print("#partitions={}".format(df_all.rdd.getNumPartitions()))
 df_all.printSchema()
 
 #FILTER
-df=df_all.filter(df_all.halo_id>0)
+#df=df_all.filter(df_all.halo_id>0)
+df=df_all
 
 
 #SELECTION
-cols="halo_id,ra,dec,redshift,stellar_mass,is_central"
+cols="halo_id,ra,dec,redshift"
 #bands=['u','g','r','i','z','y']
 bands=['i']
 for b in bands:
@@ -79,9 +80,9 @@ print("#VARIABLES={} out of {} ({:3.1f}%)".format(len(df.columns),len(df_all.col
 #print("caching...")
 #df=df.cache()
 
-itrue24=df.filter(df.mag_i<24).cache()
+gold_true=df.filter(df.mag_i<25.3).cache()
 
-print("size={} M".format(itrue24.count()/1e6))
+print("size={} M".format(gold_true.count()/1e6))
 
 
 

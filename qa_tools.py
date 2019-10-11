@@ -6,14 +6,14 @@ import pandas as pd
 import healpy as hp
 from matplotlib import pyplot as plt
 
-nside=1024
+nside=131072
 
 pixarea=hp.nside2pixarea(nside, degrees=True)*3600
 reso= hp.nside2resol(nside,arcmin=True)
 #create the ang2pix user-defined-function. 
-@pandas_udf('int', PandasUDFType.SCALAR)
+@pandas_udf('long', PandasUDFType.SCALAR)
 def Ang2Pix(ra,dec):
-    return pd.Series(hp.ang2pix(nside,np.radians(90-dec),np.radians(ra)))
+    return pd.Series(hp.ang2pix(nside,np.radians(90-dec),np.radians(ra)),nest=True)
 ##################
 
 # req: ipix,tract
@@ -167,6 +167,35 @@ def projmap_median(df,col,minmax=None,**kwargs ):
     skyMap= np.full(hp.nside2npix(nside),hp.UNSEEN)
     skyMap[map_p._1.values]=val
     hp.gnomview(skyMap,reso=reso,min=minmax[0],max=minmax[1],title="median("+col+")",**kwargs)
+    plt.show()
+    return skyMap
+
+
+
+def countsmap(df,minmax=None,**kwargs):
+    assert "ipix" in df.columns
+    df_map=df.select("ipix").groupBy("ipix").count()
+
+    #back to python world
+    map_p=df_map.toPandas()
+    A=map_p.index.size*pixarea/3600
+    print("map area={} deg2".format(A))
+    #statistics per pixel
+    var='count'
+    s=df_map.describe([var])
+    s.show()
+    r=s.select(var).take(3)
+    N=int(r[0][0])
+    mu=float(r[1][0])
+    sig=float(r[2][0])
+
+    #now data is reduced create the healpy map
+    skyMap= np.full(hp.nside2npix(nside),hp.UNSEEN)
+    skyMap[map_p['ipix'].values]=map_p[var].values
+    
+    if minmax==None:
+        minmax=(np.max([0,mu-2*sig]),mu+2*sig)
+    hp.gnomview(skyMap,reso=reso,min=minmax[0],max=minmax[1],title="density/pixel (nside={})".format(nside),**kwargs)
     plt.show()
     return skyMap
 

@@ -76,6 +76,16 @@ print("#VARIABLES={} out of {} ({:3.1f}%)".format(len(df.columns),len(df_all.col
 gal=df.filter(df.extendedness==1).drop("extendedness")
 
 
+#CACHE
+print("caching gal...")
+gal=gal.cache()
+
+print("tot size={} M".format(gal.count()/1e6))
+#print("i size={} M, i<24={}".format(i.count()/1e6,i24.count()/1e6))
+
+
+#subsamples
+
 #i<24
 #band="i"
 #cols="ipix,blendedness,psFlux_{0},psFluxErr_{0},mag_{0}_cModel,magerr_{0}_cModel,snr_{0}_cModel".format(band)
@@ -85,16 +95,9 @@ gal=df.filter(df.extendedness==1).drop("extendedness")
 
 
 #gold
-gold=gal.select("ra","dec","mag_i","psFlux_i","psFluxErr_i",'psf_fwhm_i','IxxPSF_i','IxyPSF_i','IyyPSF_i').na.drop().filter("mag_i<25.3")
-gold_cModel=gal.select("ra","dec","mag_i_cModel","magerr_i_cModel","psFlux_i","psFluxErr_i",'psf_fwhm_i','IxxPSF_i','IxyPSF_i','IyyPSF_i').na.drop().filter("mag_i_cModel<25.3")
+gold=gal.select("ipix","ra","dec","mag_i","psFlux_i","psFluxErr_i",'psf_fwhm_i','IxxPSF_i','IxyPSF_i','IyyPSF_i').na.drop().filter("mag_i<25.3")
+gold_cModel=gal.select("ipix","ra","dec","mag_i_cModel","magerr_i_cModel","psFlux_i","psFluxErr_i",'psf_fwhm_i','IxxPSF_i','IxyPSF_i','IyyPSF_i').na.drop().filter("mag_i_cModel<25.3")
 
-
-#CACHE
-print("caching...")
-df=df.cache()
-
-print("tot size={} M, gals={}".format(df.count()/1e6,gal.count()/1e6))
-#print("i size={} M, i<24={}".format(i.count()/1e6,i24.count()/1e6))
 
 
 timer.stop()
