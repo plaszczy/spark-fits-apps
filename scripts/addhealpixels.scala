@@ -39,17 +39,17 @@ val pix_neighbours=spark.udf.register("pix_neighbours",(ipix:Long)=>grid.neighbo
 val df_src=spark.read.parquet(System.getenv("RUN2"))
 
 // select columns
-var df=df_src.select("ra","dec","mag_i")
+var df=df_src.select("ra","dec","mag_i","psf_fwhm_i")
 //append _s
 for (n <- df.columns) df=df.withColumnRenamed(n,n+"_s")
 
 //filter
-df=df.filter($"mag_i_s"<25.3)
+df=df.filter($"mag_i_s"<25.3).drop("mag_i_s")
 
-//add id
+//add id: use object_id
 df=df.withColumn("id_s",F.monotonically_increasing_id)
 
-//add healpixels
+//add theta-phi and healpixels
 df=df.withColumn("theta_s",F.radians(F.lit(90)-F.col("dec_s"))).withColumn("phi_s",F.radians("ra_s"))
 df=df.withColumn("ipix",Ang2pix($"theta_s",$"phi_s")).drop("ra_s","dec_s")
 
@@ -85,7 +85,7 @@ df=df_t.select("ra","dec","mag_i")
 for (n <- df.columns) df=df.withColumnRenamed(n,n+"_t")
 
 //filter
-df=df.filter($"mag_i_t"<25.3)
+df=df.filter($"mag_i_t"<25.3).drop("mag_i_t")
 
 //add id
 df=df.withColumn("id_t",F.monotonically_increasing_id)
@@ -116,7 +116,7 @@ println(f"matched size=${nmatch/1e6}%3.2f M")
 //add euclidian distance
 //matched=matched.withColumn("d",F.hypot(matched("phi_t")-matched("phi_s"),F.sin((matched("theta_t")+matched("theta_s"))/2)*(matched("theta_t")-matched("theta_s"))))
 
-matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("r",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).withColumn("dmag",$"mag_i_s"-$"mag_i_t").drop("dx","dy","dz","theta_t","theta_s","phi_t","phi_s","mag_i_s","mag_i_t")
+matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("r",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).drop("dx","dy","dz","theta_t","theta_s","phi_t","phi_s","mag_i_s","mag_i_t")
 
 
 
@@ -140,7 +140,7 @@ def bestmatch(t:Iterable[Row]):Row = {
   val ir:Int=idx("r")
   val rbest=t.reduceLeft((r1,r2) => if (r1.getDouble(ir)<r2.getDouble(ir)) r1 else r2)
 
-  Row(rbest.getLong(idx("id_t")),rbest.getDouble(idx("r")),rbest.getDouble(idx("dmag")),t.size)
+  Row(rbest.getLong(idx("id_t")),rbest.getDouble(idx("r")),rbest.getDouble(idx("psf_fwhm_i_s")),t.size)
 }
 
 println("grouping by source id")
@@ -148,11 +148,9 @@ println("grouping by source id")
 val assoc=rdd.groupByKey.mapValues(bestmatch)
 
 //faire un df
-val perfect=assoc.map(x=>(x._1,x._2.getLong(0),x._2.getDouble(1),x._2.getDouble(2),x._2.getInt(3))).toDF("id_s","id_t","dr","dmag","nass")
+val perfect=assoc.map(x=>(x._1,x._2.getLong(0),x._2.getDouble(1),x._2.getDouble(2),x._2.getInt(3))).toDF("id_s","id_t","dr","fwhm","nass")
 perfect.show
 
-
-//verif
-//assoc.map(r=>r._2(9).asInstanceOf[Int]).map((_,1)).reduceByKey(_+_).take(10)
-
+// check fwhm
+val best=perfect.filter($"nass"===F.lit(1)).withColumn("sigma_r",F.radians($"fwhm"/2.355/3600)).withColumn("cum",F.lit(1.0)-F.exp(-$"dr"*$"dr"/($"sigma_r"*$"sigma_r"*2.0)))
 
