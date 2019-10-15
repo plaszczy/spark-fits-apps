@@ -50,10 +50,10 @@ df=df.filter($"mag_i_s"<25.3)
 df=df.withColumn("id_s",F.monotonically_increasing_id)
 
 //add healpixels
-df=df.withColumn("theta",F.radians(F.lit(90)-F.col("dec_s"))).withColumn("phi",F.radians("ra_s"))
-df=df.withColumn("ipix",Ang2pix($"theta",$"phi")).drop("theta","phi")
+df=df.withColumn("theta_s",F.radians(F.lit(90)-F.col("dec_s"))).withColumn("phi_s",F.radians("ra_s"))
+df=df.withColumn("ipix",Ang2pix($"theta_s",$"phi_s")).drop("ra_s","dec_s")
 
-//DUPLICATES
+//ADD DUPLICATES
 val dfn=df.withColumn("neighbours",pix_neighbours($"ipix"))
 
 val dup=new Array[org.apache.spark.sql.DataFrame](9)
@@ -64,7 +64,6 @@ for (i <- 0 to 7) {
   val dfclean1=df1.filter(not(df1("ipix")===F.lit(-1))).drop("neighbours")
   dup(i)=dfclean1
 }
-
 dup(8)=df
 
 val source=dup.reduceLeft(_.union(_))
@@ -79,7 +78,7 @@ println(f"source size=${Ns/1e6}%3.2f M")
 
 val df_t=spark.read.parquet(System.getenv("COSMODC2"))
 // select columns
-df=df_t.select("ra","dec","mag_i","redshift")
+df=df_t.select("ra","dec","mag_i")
 //append _t
 for (n <- df.columns) df=df.withColumnRenamed(n,n+"_t")
 
@@ -90,43 +89,36 @@ df=df.filter($"mag_i_t"<25.3)
 df=df.withColumn("id_t",F.monotonically_increasing_id)
 
 //add healpixels
-df=df.withColumn("theta",F.radians(F.lit(90)-F.col("dec_t"))).withColumn("phi",F.radians("ra_t"))
-df=df.withColumn("ipix",Ang2pix($"theta",$"phi")).drop("theta","phi")
+df=df.withColumn("theta_t",F.radians(F.lit(90)-F.col("dec_t"))).withColumn("phi_t",F.radians("ra_t"))
+df=df.withColumn("ipix",Ang2pix($"theta_t",$"phi_t")).drop("ra_t","dec_t")
 
-/*
-//DUPLICATES
-val dfn=df.withColumn("neighbours",pix_neighbours($"ipix"))
-
-val dup=new Array[org.apache.spark.sql.DataFrame](9)
-
-for (i <- 0 to 7) {
-  println(i)
-  val df1=dfn.drop("ipix").withColumn("ipix",$"neighbours"(i))
-  val dfclean1=df1.filter(not(df1("ipix")===F.lit(-1))).drop("neighbours")
-  dup(i)=dfclean1
-}
-
-dup(8)=df
-
-val target=dup.reduceLeft(_.union(_))
- */
 val target=df
 val Nt=target.cache().count
 
 //TARGET
 println(f"target size=${Nt/1e6}%3.2f M")
 
+///////////////////////////////////////////
 
-//join by index: tous les candidats paires
-val matched=source.join(target,"ipix").drop("ipix")
+//PAIRS
+//join by ipix: tous les candidats paires
+var matched=source.join(target,"ipix").drop("ipix")
+
+
 val nmatch=matched.cache.count()
 println(f"matched size=${nmatch/1e6}%3.2f M")
+
+//add euclidian distance
+matched=matched.withColumn("d",F.hypot(matched("phi_t")-matched("phi_s"),F.sin((matched("theta_t")+matched("theta_s"))/2)*(matched("theta_t")-matched("theta_s")))).withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("r",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).withColumn("dmag",$"mag_i_s"-$"mag_i_t").drop("dx","dy","dz","theta_t","theta_s","phi_t","phi_s","mag_i_s","mag_i_t")
+
+
 
 
 // combien de candidats par source
 val nass=matched.groupBy("id_s").count.withColumnRenamed("count","ncand")
 //stat nass
 nass.groupBy("ncand").count.withColumn("frac",$"count"/nmatch).sort("ncand").show
+
 
 
 //df : agg ou window?
@@ -146,10 +138,6 @@ def bestmatch(it:Iterable[Row]):Row = {
   var d:Double = -1.0
   for (r <- it) {
     id_t= r.getLong(idx("id_t"))
-    val ra1= r.getFloat(idx("ra_s"))
-    val ra2= r.getFloat(idx("ra_t"))
-    val dec1= r.getFloat(idx("dec_s"))
-    val dec2= r.getFloat(idx("dec_t"))
   }
   Row(id_t,Ncand)
 }
@@ -160,4 +148,4 @@ val assoc=rdd.groupByKey.mapValues(bestmatch)
 //assoc.map(r=>r._2(9).asInstanceOf[Int]).map((_,1)).reduceByKey(_+_).take(10)
 
 //faire un df
-assoc.map(x=>(x._1,x._2.getLong(0),x._2.getInt(1))).toDF
+//assoc.map(x=>(x._1,x._2.getLong(0),x._2.getInt(1))).toDF
