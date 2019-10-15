@@ -68,6 +68,8 @@ dup(8)=df
 
 val source=dup.reduceLeft(_.union(_))
 
+println("caching source+duplicates")
+
 val Ns=source.cache().count
 
 println(f"source size=${Ns/1e6}%3.2f M")
@@ -93,9 +95,11 @@ df=df.withColumn("theta_t",F.radians(F.lit(90)-F.col("dec_t"))).withColumn("phi_
 df=df.withColumn("ipix",Ang2pix($"theta_t",$"phi_t")).drop("ra_t","dec_t")
 
 val target=df
+
+println("caching target")
+
 val Nt=target.cache().count
 
-//TARGET
 println(f"target size=${Nt/1e6}%3.2f M")
 
 ///////////////////////////////////////////
@@ -104,24 +108,22 @@ println(f"target size=${Nt/1e6}%3.2f M")
 //join by ipix: tous les candidats paires
 var matched=source.join(target,"ipix").drop("ipix")
 
+println("joining on ipix")
 
 val nmatch=matched.cache.count()
 println(f"matched size=${nmatch/1e6}%3.2f M")
 
 //add euclidian distance
-matched=matched.withColumn("d",F.hypot(matched("phi_t")-matched("phi_s"),F.sin((matched("theta_t")+matched("theta_s"))/2)*(matched("theta_t")-matched("theta_s")))).withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("r",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).withColumn("dmag",$"mag_i_s"-$"mag_i_t").drop("dx","dy","dz","theta_t","theta_s","phi_t","phi_s","mag_i_s","mag_i_t")
+//matched=matched.withColumn("d",F.hypot(matched("phi_t")-matched("phi_s"),F.sin((matched("theta_t")+matched("theta_s"))/2)*(matched("theta_t")-matched("theta_s"))))
 
+matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("r",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).withColumn("dmag",$"mag_i_s"-$"mag_i_t").drop("dx","dy","dz","theta_t","theta_s","phi_t","phi_s","mag_i_s","mag_i_t")
 
 
 
 // combien de candidats par source
-val nass=matched.groupBy("id_s").count.withColumnRenamed("count","ncand")
+//val nass=matched.groupBy("id_s").count.withColumnRenamed("count","ncand")
 //stat nass
-nass.groupBy("ncand").count.withColumn("frac",$"count"/nmatch).sort("ncand").show
-
-
-
-//df : agg ou window?
+//nass.groupBy("ncand").count.withColumn("frac",$"count"/nmatch).sort("ncand").show
 
 
 // pair RDD
@@ -132,20 +134,25 @@ val idx=matched.columns.map(s=>(s,matched.columns.indexOf(s))).toMap
 val rdd=matched.rdd.map(r=>(r.getLong(idx("id_s")),r))
 
 
-def bestmatch(it:Iterable[Row]):Row = {
-  val Ncand=it.size
-  var id_t:Long = -1
-  var d:Double = -1.0
-  for (r <- it) {
-    id_t= r.getLong(idx("id_t"))
-  }
-  Row(id_t,Ncand)
+def bestmatch(t:Iterable[Row]):Row = {
+//attention c'est pas un iterator mais Iterable donc Traversable (foreach)
+
+  val ir:Int=idx("r")
+  val rbest=t.reduceLeft((r1,r2) => if (r1.getDouble(ir)<r2.getDouble(ir)) r1 else r2)
+
+  Row(rbest.getLong(idx("id_t")),rbest.getDouble(idx("r")),rbest.getDouble(idx("dmag")),t.size)
 }
 
+println("grouping by source id")
+//groupby id_s : apply bestchoice
 val assoc=rdd.groupByKey.mapValues(bestmatch)
+
+//faire un df
+val perfect=assoc.map(x=>(x._1,x._2.getLong(0),x._2.getDouble(1),x._2.getDouble(2),x._2.getInt(3))).toDF("id_s","id_t","dr","dmag","nass")
+perfect.show
+
 
 //verif
 //assoc.map(r=>r._2(9).asInstanceOf[Int]).map((_,1)).reduceByKey(_+_).take(10)
 
-//faire un df
-//assoc.map(x=>(x._1,x._2.getLong(0),x._2.getInt(1))).toDF
+
