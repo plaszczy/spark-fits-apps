@@ -66,8 +66,7 @@ dup(8)=df
 
 val source=dup.reduceLeft(_.union(_))
 
-source.printSchema
-println("caching source+duplicates")
+println("*** caching source+duplicates: "+source.columns.mkString(", "))
 
 val Ns=source.cache().count
 
@@ -81,7 +80,7 @@ val df_t=spark.read.parquet(System.getenv("COSMODC2"))
 // select columns
 df=df_t.select("galaxy_id","ra","dec","mag_i")
 //append _t
-for (n <- df.columns) df=df.withColumnRenamed(n,n+"_t")
+for (n <- df.columns.tail) df=df.withColumnRenamed(n,n+"_t")
 
 //filter
 df=df.filter($"mag_i_t"<25.3).drop("mag_i_t")
@@ -92,7 +91,7 @@ df=df.withColumn("ipix",Ang2pix($"theta_t",$"phi_t")).drop("ra_t","dec_t")
 
 val target=df
 
-println("caching target")
+println("*** caching target: "+target.columns.mkString(", "))
 
 val Nt=target.cache().count
 
@@ -104,10 +103,10 @@ println(f"target size=${Nt/1e6}%3.2f M")
 //join by ipix: tous les candidats paires
 var matched=source.join(target,"ipix").drop("ipix")
 
-println("joining on ipix")
-
+println("joining on ipix: "+matched.columns.mkString(", "))
 val nmatch=matched.cache.count()
 println(f"matched size=${nmatch/1e6}%3.2f M")
+
 
 //add euclidian distance
 //matched=matched.withColumn("d",F.hypot(matched("phi_t")-matched("phi_s"),F.sin((matched("theta_t")+matched("theta_s"))/2)*(matched("theta_t")-matched("theta_s"))))
@@ -140,12 +139,13 @@ def bestmatch(t:Iterable[Row]):Row = {
 
 println("grouping by source id")
 //groupby objectId : apply bestchoice
-val assoc=rdd.groupByKey.mapValues(bestmatch)
+val assoc=rdd.groupByKey.mapValues(bestmatch).map(x=>(x._1,x._2.getLong(0),x._2.getDouble(1),x._2.getDouble(2),x._2.getInt(3))).toDF("objectId","galaxy_id","r","fwhm","nass")
 
-//faire un df
-val perfect=assoc.map(x=>(x._1,x._2.getLong(0),x._2.getDouble(1),x._2.getDouble(2),x._2.getInt(3))).toDF("objectId","galaxy_id","dr","fwhm","nass")
-perfect.show
 
 // check fwhm
-val best=perfect.filter($"nass"===F.lit(1)).withColumn("sigma_r",F.radians($"fwhm"/2.355/3600)).withColumn("cum",F.lit(1.0)-F.exp(-$"dr"*$"dr"/($"sigma_r"*$"sigma_r"*2.0)))
+val perfect=assoc.filter($"nass"===F.lit(1)).withColumn("r_as",F.degrees($"r")*3600).withColumn("sigma_r",$"fwhm"/2.355).withColumn("cum",F.lit(1.0)-F.exp(-$"r_as"*$"r_as"/($"sigma_r"*$"sigma_r"*2.0))).drop("r","fwhm")
 
+println("*** caching perfect: "+perfect.columns.mkString(", "))
+perfect.cache.count
+
+perfect.describe("r_as","cum").show
