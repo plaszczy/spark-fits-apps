@@ -39,15 +39,13 @@ val pix_neighbours=spark.udf.register("pix_neighbours",(ipix:Long)=>grid.neighbo
 val df_src=spark.read.parquet(System.getenv("RUN2"))
 
 // select columns
-var df=df_src.select("ra","dec","mag_i","psf_fwhm_i")
-//append _s
-for (n <- df.columns) df=df.withColumnRenamed(n,n+"_s")
+var df=df_src.select("objectId","ra","dec","mag_i","psf_fwhm_i")
+
+//append _s but on id
+for (n <- df.columns.tail) df=df.withColumnRenamed(n,n+"_s")
 
 //filter
 df=df.filter($"mag_i_s"<25.3).drop("mag_i_s")
-
-//add id: use object_id
-df=df.withColumn("id_s",F.monotonically_increasing_id)
 
 //add theta-phi and healpixels
 df=df.withColumn("theta_s",F.radians(F.lit(90)-F.col("dec_s"))).withColumn("phi_s",F.radians("ra_s"))
@@ -68,6 +66,7 @@ dup(8)=df
 
 val source=dup.reduceLeft(_.union(_))
 
+source.printSchema
 println("caching source+duplicates")
 
 val Ns=source.cache().count
@@ -80,15 +79,12 @@ println(f"source size=${Ns/1e6}%3.2f M")
 
 val df_t=spark.read.parquet(System.getenv("COSMODC2"))
 // select columns
-df=df_t.select("ra","dec","mag_i")
+df=df_t.select("galaxy_id","ra","dec","mag_i")
 //append _t
 for (n <- df.columns) df=df.withColumnRenamed(n,n+"_t")
 
 //filter
 df=df.filter($"mag_i_t"<25.3).drop("mag_i_t")
-
-//add id
-df=df.withColumn("id_t",F.monotonically_increasing_id)
 
 //add healpixels
 df=df.withColumn("theta_t",F.radians(F.lit(90)-F.col("dec_t"))).withColumn("phi_t",F.radians("ra_t"))
@@ -119,9 +115,8 @@ println(f"matched size=${nmatch/1e6}%3.2f M")
 matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("r",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).drop("dx","dy","dz","theta_t","theta_s","phi_t","phi_s","mag_i_s","mag_i_t")
 
 
-
 // combien de candidats par source
-//val nass=matched.groupBy("id_s").count.withColumnRenamed("count","ncand")
+//val nass=matched.groupBy("objectId").count.withColumnRenamed("count","ncand")
 //stat nass
 //nass.groupBy("ncand").count.withColumn("frac",$"count"/nmatch).sort("ncand").show
 
@@ -130,8 +125,8 @@ matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_
 //create a map to retrieve position
 val idx=matched.columns.map(s=>(s,matched.columns.indexOf(s))).toMap
 
-//build paiRDD based on key id_s
-val rdd=matched.rdd.map(r=>(r.getLong(idx("id_s")),r))
+//build paiRDD based on key objectId
+val rdd=matched.rdd.map(r=>(r.getLong(idx("objectId")),r))
 
 
 def bestmatch(t:Iterable[Row]):Row = {
@@ -140,15 +135,15 @@ def bestmatch(t:Iterable[Row]):Row = {
   val ir:Int=idx("r")
   val rbest=t.reduceLeft((r1,r2) => if (r1.getDouble(ir)<r2.getDouble(ir)) r1 else r2)
 
-  Row(rbest.getLong(idx("id_t")),rbest.getDouble(idx("r")),rbest.getDouble(idx("psf_fwhm_i_s")),t.size)
+  Row(rbest.getLong(idx("galaxy_id")),rbest.getDouble(idx("r")),rbest.getDouble(idx("psf_fwhm_i_s")),t.size)
 }
 
 println("grouping by source id")
-//groupby id_s : apply bestchoice
+//groupby objectId : apply bestchoice
 val assoc=rdd.groupByKey.mapValues(bestmatch)
 
 //faire un df
-val perfect=assoc.map(x=>(x._1,x._2.getLong(0),x._2.getDouble(1),x._2.getDouble(2),x._2.getInt(3))).toDF("id_s","id_t","dr","fwhm","nass")
+val perfect=assoc.map(x=>(x._1,x._2.getLong(0),x._2.getDouble(1),x._2.getDouble(2),x._2.getInt(3))).toDF("objectId","galaxy_id","dr","fwhm","nass")
 perfect.show
 
 // check fwhm
