@@ -115,7 +115,7 @@ var matched=source.join(target,"ipix").drop("ipix")
 
 println("joining on ipix: "+matched.columns.mkString(", "))
 val nmatch=matched.cache.count()
-println(f"matched size=${nmatch/1e6}%3.2f M")
+println(f"#pair-associations=${nmatch/1e6}%3.2f M")
 
 //release mem
 source.unpersist
