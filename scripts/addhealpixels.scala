@@ -8,7 +8,14 @@ import healpix.essentials.Scheme.NESTED
 import org.apache.spark.sql.functions.udf
 import org.apache.spark.sql.types._
 
-//import df_tools._
+// Logger info
+import org.apache.log4j.Level
+import org.apache.log4j.Logger
+
+
+// Set to Level.WARN is you want verbosity
+Logger.getLogger("org").setLevel(Level.OFF)
+Logger.getLogger("akka").setLevel(Level.OFF)
 
 
 class ExtPointing extends Pointing with java.io.Serializable
@@ -42,7 +49,7 @@ val pix_neighbours=spark.udf.register("pix_neighbours",(ipix:Long)=>grid.neighbo
 val df_src=spark.read.parquet(System.getenv("RUN2"))
 
 // select columns
-var df=df_src.select("objectId","ra","dec","mag_i","psf_fwhm_i")
+var df=df_src.select("objectId","ra","dec","mag_i","psf_fwhm_i").na.drop
 
 //append _s but on id
 for (n <- df.columns.tail) df=df.withColumnRenamed(n,n+"_s")
@@ -81,7 +88,7 @@ println(f"source size=${Ns/1e6}%3.2f M")
 
 val df_t=spark.read.parquet(System.getenv("COSMODC2"))
 // select columns
-df=df_t.select("galaxy_id","ra","dec","mag_i")
+df=df_t.select("galaxy_id","ra","dec","mag_i").na.drop
 //append _t
 for (n <- df.columns.tail) df=df.withColumnRenamed(n,n+"_t")
 
@@ -121,14 +128,16 @@ target.unpersist
 
 matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("r",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).drop("dx","dy","dz","theta_t","theta_s","phi_t","phi_s","mag_i_s","mag_i_t")
 
-
 // combien de candidats par source
 val cands=matched.groupBy("objectId").count.withColumnRenamed("count","ncand")
 
 
 //stat nass
 println("caching #associations")
-cands.cache.groupBy("ncand").count.withColumn("frac",$"count"/nmatch).sort("ncand").show
+var cand_stat=cands.cache.groupBy("ncand").count
+val nc=cand_stat.rdd.map(r => r.getLong(1)).reduce(_+_)
+
+cand_stat.withColumn("frac",$"count"/nc).sort("ncand").show
 
 
 // pair RDD
