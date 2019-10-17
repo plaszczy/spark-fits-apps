@@ -6,7 +6,7 @@ import java.io._
 
 def df_minmax(df:DataFrame,col:String)=df.select(F.min(col),F.max(col)).first()
 
-def df_hist(df_in:DataFrame,col:String,bounds:Array[Double],Nbins:Int=50)={
+def df_hist(df_in:DataFrame,col:String,bounds:Seq[Double],Nbins:Int=50)={
 
   //drop nans if any
   val df=df_in.select(col).na.drop()
@@ -30,7 +30,6 @@ def savetxt(df:DataFrame,file:String="df.txt")={
   val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file,append)))
   for (r <- A) {
     val s=r.toSeq.mkString("\t")
-    //for (s <- buf)  writer.write(s+"\t")
     writer.write(s+"\n")
   }
 

@@ -8,6 +8,9 @@ import healpix.essentials.Scheme.NESTED
 import org.apache.spark.sql.functions.udf
 import org.apache.spark.sql.types._
 
+//import df_tools._
+
+
 class ExtPointing extends Pointing with java.io.Serializable
 case class Point2D(ra: Double, dec: Double)
 
@@ -107,6 +110,11 @@ println("joining on ipix: "+matched.columns.mkString(", "))
 val nmatch=matched.cache.count()
 println(f"matched size=${nmatch/1e6}%3.2f M")
 
+//release mem
+source.unpersist
+target.unpersist
+
+
 
 //add euclidian distance
 //matched=matched.withColumn("d",F.hypot(matched("phi_t")-matched("phi_s"),F.sin((matched("theta_t")+matched("theta_s"))/2)*(matched("theta_t")-matched("theta_s"))))
@@ -115,9 +123,12 @@ matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_
 
 
 // combien de candidats par source
-//val nass=matched.groupBy("objectId").count.withColumnRenamed("count","ncand")
+val cands=matched.groupBy("objectId").count.withColumnRenamed("count","ncand")
+
+
 //stat nass
-//nass.groupBy("ncand").count.withColumn("frac",$"count"/nmatch).sort("ncand").show
+println("caching #associations")
+cands.cache.groupBy("ncand").count.withColumn("frac",$"count"/nmatch).sort("ncand").show
 
 
 // pair RDD
@@ -127,7 +138,7 @@ val idx=matched.columns.map(s=>(s,matched.columns.indexOf(s))).toMap
 //build paiRDD based on key objectId
 val rdd=matched.rdd.map(r=>(r.getLong(idx("objectId")),r))
 
-
+/*
 def bestmatch(t:Iterable[Row]):Row = {
 //attention c'est pas un iterator mais Iterable donc Traversable (foreach)
 
@@ -136,14 +147,22 @@ def bestmatch(t:Iterable[Row]):Row = {
 
   Row(rbest.getLong(idx("galaxy_id")),rbest.getDouble(idx("r")),rbest.getDouble(idx("psf_fwhm_i_s")),t.size)
 }
-
 println("grouping by source id")
-//groupby objectId : apply bestchoice
+groupby objectId : apply bestchoice
 val assoc=rdd.groupByKey.mapValues(bestmatch).map(x=>(x._1,x._2.getLong(0),x._2.getDouble(1),x._2.getDouble(2),x._2.getInt(3))).toDF("objectId","galaxy_id","r","fwhm","nass")
+ */
+
+println("reducebykey id_source")
+val ir:Int=idx("r")
+val ass=rdd.reduceByKey((r1,r2)=> if (r1.getDouble(ir)<r2.getDouble(ir)) r1 else r2).map(x=>(x._2.getLong(idx("objectId")),x._2.getLong(idx("galaxy_id")),x._2.getDouble(ir),x._2.getDouble(idx("psf_fwhm_i_s")))).toDF("objectId","galaxy_id","r","fwhm")
+
+
+//join with number of ass
+val assoc=ass.join(cands,"objectId")
 
 
 // check fwhm
-val perfect=assoc.filter($"nass"===F.lit(1)).withColumn("r_as",F.degrees($"r")*3600).withColumn("sigma_r",$"fwhm"/2.355).withColumn("cum",F.lit(1.0)-F.exp(-$"r_as"*$"r_as"/($"sigma_r"*$"sigma_r"*2.0))).drop("r","fwhm")
+val perfect=assoc.filter($"ncand"===F.lit(1)).withColumn("r_as",F.degrees($"r")*3600).withColumn("sigma_r",$"fwhm"/2.355).withColumn("cum",F.lit(1.0)-F.exp(-$"r_as"*$"r_as"/($"sigma_r"*$"sigma_r"*2.0))).drop("r","fwhm")
 
 println("*** caching perfect: "+perfect.columns.mkString(", "))
 perfect.cache.count
