@@ -49,17 +49,14 @@ val pix_neighbours=spark.udf.register("pix_neighbours",(ipix:Long)=>grid.neighbo
 val df_src=spark.read.parquet(System.getenv("RUN2"))
 
 // select columns
-var df=df_src.select("objectId","ra","dec","mag_i","psf_fwhm_i").na.drop
-
-//append _s but on id
-for (n <- df.columns.tail) df=df.withColumnRenamed(n,n+"_s")
+var df=df_src.select("objectId","ra","dec","mag_i_cModel","psf_fwhm_i","magerr_i_cModel").na.drop
 
 //filter
-df=df.filter($"mag_i_s"<25.3).drop("mag_i_s")
+df=df.filter($"mag_i_cModel"<25.3)
 
 //add theta-phi and healpixels
-df=df.withColumn("theta_s",F.radians(F.lit(90)-F.col("dec_s"))).withColumn("phi_s",F.radians("ra_s"))
-df=df.withColumn("ipix",Ang2pix($"theta_s",$"phi_s")).drop("ra_s","dec_s")
+df=df.withColumn("theta_s",F.radians(F.lit(90)-F.col("dec"))).withColumn("phi_s",F.radians("ra"))
+df=df.withColumn("ipix",Ang2pix($"theta_s",$"phi_s")).drop("ra","dec")
 
 //ADD DUPLICATES
 val dfn=df.withColumn("neighbours",pix_neighbours($"ipix"))
@@ -89,15 +86,13 @@ println(f"source size=${Ns/1e6}%3.2f M")
 val df_t=spark.read.parquet(System.getenv("COSMODC2"))
 // select columns
 df=df_t.select("galaxy_id","ra","dec","mag_i").na.drop
-//append _t
-for (n <- df.columns.tail) df=df.withColumnRenamed(n,n+"_t")
 
 //filter
-df=df.filter($"mag_i_t"<25.3).drop("mag_i_t")
+df=df.filter($"mag_i"<25.3)
 
 //add healpixels
-df=df.withColumn("theta_t",F.radians(F.lit(90)-F.col("dec_t"))).withColumn("phi_t",F.radians("ra_t"))
-df=df.withColumn("ipix",Ang2pix($"theta_t",$"phi_t")).drop("ra_t","dec_t")
+df=df.withColumn("theta_t",F.radians(F.lit(90)-F.col("dec"))).withColumn("phi_t",F.radians("ra"))
+df=df.withColumn("ipix",Ang2pix($"theta_t",$"phi_t")).drop("ra","dec")
 
 val target=df
 
@@ -118,21 +113,21 @@ val nmatch=matched.cache.count()
 println(f"#pair-associations=${nmatch/1e6}%3.2f M")
 
 //release mem
-source.unpersist
-target.unpersist
+//source.unpersist
+//target.unpersist
 
 
 
 //add euclidian distance
 //matched=matched.withColumn("d",F.hypot(matched("phi_t")-matched("phi_s"),F.sin((matched("theta_t")+matched("theta_s"))/2)*(matched("theta_t")-matched("theta_s"))))
 
-matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("r",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).drop("dx","dy","dz","theta_t","theta_s","phi_t","phi_s","mag_i_s","mag_i_t")
+matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("r",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).withColumn("dmag",$"mag_i_cModel"-$"mag_i").drop("dx","dy","dz","theta_t","theta_s","phi_t","phi_s","mag_i_cModel","mag_i")
 
 // combien de candidats par source
 val cands=matched.groupBy("objectId").count.withColumnRenamed("count","ncand")
 
 
-//stat nass
+//stat ass
 println("caching #associations")
 var cand_stat=cands.cache.groupBy("ncand").count
 val nc=cand_stat.rdd.map(r => r.getLong(1)).reduce(_+_)
@@ -147,23 +142,9 @@ val idx=matched.columns.map(s=>(s,matched.columns.indexOf(s))).toMap
 //build paiRDD based on key objectId
 val rdd=matched.rdd.map(r=>(r.getLong(idx("objectId")),r))
 
-/*
-def bestmatch(t:Iterable[Row]):Row = {
-//attention c'est pas un iterator mais Iterable donc Traversable (foreach)
-
-  val ir:Int=idx("r")
-  val rbest=t.reduceLeft((r1,r2) => if (r1.getDouble(ir)<r2.getDouble(ir)) r1 else r2)
-
-  Row(rbest.getLong(idx("galaxy_id")),rbest.getDouble(idx("r")),rbest.getDouble(idx("psf_fwhm_i_s")),t.size)
-}
-println("grouping by source id")
-groupby objectId : apply bestchoice
-val assoc=rdd.groupByKey.mapValues(bestmatch).map(x=>(x._1,x._2.getLong(0),x._2.getDouble(1),x._2.getDouble(2),x._2.getInt(3))).toDF("objectId","galaxy_id","r","fwhm","nass")
- */
-
 println("reducebykey id_source")
 val ir:Int=idx("r")
-val ass=rdd.reduceByKey((r1,r2)=> if (r1.getDouble(ir)<r2.getDouble(ir)) r1 else r2).map(x=>(x._2.getLong(idx("objectId")),x._2.getLong(idx("galaxy_id")),x._2.getDouble(ir),x._2.getDouble(idx("psf_fwhm_i_s")))).toDF("objectId","galaxy_id","r","fwhm")
+val ass=rdd.reduceByKey((r1,r2)=> if (r1.getDouble(ir)<r2.getDouble(ir)) r1 else r2).map(x=>(x._2.getLong(idx("objectId")),x._2.getLong(idx("galaxy_id")),x._2.getDouble(ir),x._2.getDouble(idx("psf_fwhm_i")),x._2.getDouble(idx("dmag")),x._2.getDouble(idx("magerr_i_cModel")))).toDF("objectId","galaxy_id","d","fwhm","dmag","magerr")
 
 
 //join with number of ass
@@ -171,9 +152,9 @@ val assoc=ass.join(cands,"objectId")
 
 
 // check fwhm
-val perfect=assoc.filter($"ncand"===F.lit(1)).withColumn("r_as",F.degrees($"r")*3600).withColumn("sigma_r",$"fwhm"/2.355).withColumn("cum",F.lit(1.0)-F.exp(-$"r_as"*$"r_as"/($"sigma_r"*$"sigma_r"*2.0))).drop("r","fwhm")
+val perfect=assoc.filter($"ncand"===F.lit(1)).withColumn("r",F.degrees($"d")*3600).withColumn("sigr",$"fwhm"/2.355).withColumn("cumr",F.lit(1.0)-F.exp(-$"r"*$"r"/($"sigr"*$"sigr"*2.0))).drop("ncand","d","fwhm")
 
 println("*** caching perfect: "+perfect.columns.mkString(", "))
 perfect.cache.count
 
-perfect.describe("r_as","cum").show
+//perfect.describe("r_as","cum").show
