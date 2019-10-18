@@ -49,14 +49,20 @@ val pix_neighbours=spark.udf.register("pix_neighbours",(ipix:Long)=>grid.neighbo
 val df_src=spark.read.parquet(System.getenv("RUN2"))
 
 // select columns
-var df=df_src.select("objectId","ra","dec","mag_i_cModel","psf_fwhm_i","magerr_i_cModel").na.drop
+var df=df_src.select("objectId","ra","dec","mag_i_cModel","psf_fwhm_i","magerr_i_cModel","cModelFlux_i","cModelFluxErr_i").na.drop
 
 //filter
 df=df.filter($"mag_i_cModel"<25.3)
 
+
 //add theta-phi and healpixels
 df=df.withColumn("theta_s",F.radians(F.lit(90)-F.col("dec"))).withColumn("phi_s",F.radians("ra"))
 df=df.withColumn("ipix",Ang2pix($"theta_s",$"phi_s")).drop("ra","dec")
+
+println("*** caching source: "+df.columns.mkString(", "))
+val n_in=df.cache.count
+println(f"input size=${n_in/1e6}%3.2f M")
+
 
 //ADD DUPLICATES
 val dfn=df.withColumn("neighbours",pix_neighbours($"ipix"))
@@ -77,8 +83,9 @@ println("*** caching source+duplicates: "+source.columns.mkString(", "))
 
 val Ns=source.cache().count
 
-println(f"source size=${Ns/1e6}%3.2f M")
+println(f"source+duplicates size=${Ns/1e6}%3.2f M")
 
+df.unpersist
 
 /************************/
 //TARGET=cosmodc2
@@ -113,19 +120,44 @@ val nmatch=matched.cache.count()
 println(f"#pair-associations=${nmatch/1e6}%3.2f M")
 
 //release mem
-//source.unpersist
-//target.unpersist
-
-
+source.unpersist
+target.unpersist
 
 //add euclidian distance
 //matched=matched.withColumn("d",F.hypot(matched("phi_t")-matched("phi_s"),F.sin((matched("theta_t")+matched("theta_s"))/2)*(matched("theta_t")-matched("theta_s"))))
 
-matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("r",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).withColumn("dmag",$"mag_i_cModel"-$"mag_i").drop("dx","dy","dz","theta_t","theta_s","phi_t","phi_s","mag_i_cModel","mag_i")
+//add distance column
+matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).drop("dx","dy","dz")
 
+// pair RDD
+//create a map to retrieve position
+val idx=matched.columns.map(s=>(s,matched.columns.indexOf(s))).toMap
+
+//build paiRDD based on key objectId
+
+/*
+val rdd=matched.rdd.map(r=>(r.getLong(idx("objectId")),r))
+val ir:Int=idx("d")
+val ass_rdd=rdd.reduceByKey((r1,r2)=> if (r1.getDouble(ir)<r2.getDouble(ir)) r1 else r2)
+val ass=spark.createDataFrame(ass_rdd.map(x=>x._2),matched.schema)
+ */
+
+//reduce by min(r) and accumlate counts
+val ir:Int=idx("d")
+val rdd=matched.rdd.map{ r=>(r.getLong(idx("objectId")),(r,1L)) } 
+val ass_rdd=rdd.reduceByKey { case ( (r1,c1),(r2,c2)) => (if (r1.getDouble(ir)<r2.getDouble(ir)) r1 else r2 ,c1+c2) }
+val ass=spark.createDataFrame(ass_rdd.map{ case (k,(r,c))=> Row.fromSeq(r.toSeq++Seq(c)) },matched.schema.add(StructField("nass",LongType,true)))
+
+println("*** reducebykey id_source")
+val nc=ass.cache.count
+
+
+matched.unpersist
+
+//join with number of ass
+/*
 // combien de candidats par source
 val cands=matched.groupBy("objectId").count.withColumnRenamed("count","ncand")
-
 
 //stat ass
 println("caching #associations")
@@ -134,27 +166,22 @@ val nc=cand_stat.rdd.map(r => r.getLong(1)).reduce(_+_)
 
 cand_stat.withColumn("frac",$"count"/nc).sort("ncand").show
 
-
-// pair RDD
-//create a map to retrieve position
-val idx=matched.columns.map(s=>(s,matched.columns.indexOf(s))).toMap
-
-//build paiRDD based on key objectId
-val rdd=matched.rdd.map(r=>(r.getLong(idx("objectId")),r))
-
-println("reducebykey id_source")
-val ir:Int=idx("r")
-val ass=rdd.reduceByKey((r1,r2)=> if (r1.getDouble(ir)<r2.getDouble(ir)) r1 else r2).map(x=>(x._2.getLong(idx("objectId")),x._2.getLong(idx("galaxy_id")),x._2.getDouble(ir),x._2.getDouble(idx("psf_fwhm_i")),x._2.getDouble(idx("dmag")),x._2.getDouble(idx("magerr_i_cModel")))).toDF("objectId","galaxy_id","d","fwhm","dmag","magerr")
+println("join with ncands (caching)")
+val assoc=ass.cache.join(cands,"objectId")
+ */
 
 
-//join with number of ass
-val assoc=ass.join(cands,"objectId")
+//stat on # associations: unnecessary
+ass.groupBy("nass").count.withColumn("frac",$"count"/nc).sort("nass").show
 
 
-// check fwhm
-val perfect=assoc.filter($"ncand"===F.lit(1)).withColumn("r",F.degrees($"d")*3600).withColumn("sigr",$"fwhm"/2.355).withColumn("cumr",F.lit(1.0)-F.exp(-$"r"*$"r"/($"sigr"*$"sigr"*2.0))).drop("ncand","d","fwhm")
 
-println("*** caching perfect: "+perfect.columns.mkString(", "))
-perfect.cache.count
+// ncand=1
+val df1=ass.filter($"nass"===F.lit(1)).withColumn("r",F.degrees($"d")*3600).withColumn("sigr",$"psf_fwhm_i"/2.355).withColumn("cumr",F.lit(1.0)-F.exp(-$"r"*$"r"/($"sigr"*$"sigr"*2.0))).drop("nass","d","psf_fwhm_i")
 
-//perfect.describe("r_as","cum").show
+println("*** caching df1: "+df1.columns.mkString(", "))
+val n_out1=df1.cache.count
+df1.printSchema
+
+println(f"IN=${n_in/1e6}%3.2f M MATCHED=${nc/1e6}%3.2f M (${nc.toFloat/n_in*100}%.1f%%) GOLD=${n_out1/1e6}%3.2f M (${n_out1.toFloat/n_in*100}%.1f%%)")
+
