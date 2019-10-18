@@ -20,7 +20,7 @@ def df_savetxt(df:DataFrame,file:String="df.txt")={
 }
 
 
-def df_hist(df_in:DataFrame,col:String,bounds: Option[(Double,Double)]=None, Nbins:Int=50,doStat:Boolean=true,f:Stnring="df.txt")={
+def df_hist(df_in:DataFrame,col:String,bounds: Option[(Double,Double)]=None, Nbins:Int=50,doStat:Boolean=true,fn:String="df.txt")={
 
   //drop nans if any
   val df=df_in.select(col).na.drop()
@@ -40,7 +40,7 @@ def df_hist(df_in:DataFrame,col:String,bounds: Option[(Double,Double)]=None, Nbi
   val h=zbin.groupBy("bin").count.sort("bin")
   val p=h.select($"bin",(lit(zmin+dz/2)+h("bin")*lit(dz)).as("loc"),$"count").drop("bin")
   
-  df_savetxt(fn)
+  df_savetxt(p,fn)
 
   p
 
