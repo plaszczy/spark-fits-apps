@@ -17,10 +17,22 @@ import org.apache.log4j.Logger
 Logger.getLogger("org").setLevel(Level.OFF)
 Logger.getLogger("akka").setLevel(Level.OFF)
 
+//Timer
+class Timer (var t0:Double=System.nanoTime().toDouble,   var dt:Double=0)  {
+  def step:Double={
+    val t1 = System.nanoTime().toDouble
+    dt=(t1-t0)/1e9
+    t0=t1
+    dt
+  }
+  def print(msg:String):Unit={
+    val sep="----------------------------------------"
+    println("\n"+msg+": "+dt+" s\n"+sep)
+  }
+}
 
+//Healpix
 class ExtPointing extends Pointing with java.io.Serializable
-case class Point2D(ra: Double, dec: Double)
-
 val nside=131072
 sc.broadcast(nside)
 
@@ -44,6 +56,8 @@ val Ang2pix=spark.udf.register("Ang2pix",(theta:Double,phi:Double)=>grid.index(t
 val pix_neighbours=spark.udf.register("pix_neighbours",(ipix:Long)=>grid.neighbours(ipix))
 
 /************************/
+val timer=new Timer
+
 //SOURCE=run2
 
 val df_src=spark.read.parquet(System.getenv("RUN2"))
@@ -185,3 +199,5 @@ df1.printSchema
 
 println(f"IN=${n_in/1e6}%3.2f M MATCHED=${nc/1e6}%3.2f M (${nc.toFloat/n_in*100}%.1f%%) GOLD=${n_out1/1e6}%3.2f M (${n_out1.toFloat/n_in*100}%.1f%%)")
 
+val dt=timer.step
+timer.print("completed")
