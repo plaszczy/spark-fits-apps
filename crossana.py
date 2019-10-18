@@ -6,7 +6,7 @@ from scipy.interpolate import interp1d
 x,y=loadtxt("dphi.txt",unpack=True)
 figure()
 bar_outline(x,y)
-ylim(1,1.2*max(y))
+ylim(0.8*min(y),1.2*max(y))
 semilogy()
 axvline(0,c='k',lw=0.5)
 xlabel(r"$\Delta\Phi\quad(arcsec)$")
