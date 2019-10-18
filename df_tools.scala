@@ -6,10 +6,26 @@ import java.io._
 
 def df_minmax(df:DataFrame,col:String)=df.select(F.min(col),F.max(col)).first()
 
-def df_hist(df_in:DataFrame,col:String,bounds: Option[(Double,Double)]=None, Nbins:Int=50)={
+def df_savetxt(df:DataFrame,file:String="df.txt")={
+  val A=df.collect
+  val append=false
+  val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file,append)))
+  for (r <- A) {
+    val s=r.toSeq.mkString("\t")
+    writer.write(s+"\n")
+  }
+
+  writer.close
+  println(file+ " written")
+}
+
+
+def df_hist(df_in:DataFrame,col:String,bounds: Option[(Double,Double)]=None, Nbins:Int=50,doStat:Boolean=true,f:Stnring="df.txt")={
 
   //drop nans if any
   val df=df_in.select(col).na.drop()
+
+  if (doStat) df.describe(col).map(r=>(r.getString(0),r.getString(1))).collect.foreach(x=>println(x._1+"="+x._2))
 
   val (zmin,zmax) = bounds match {
     case Some(b) => b
@@ -24,19 +40,9 @@ def df_hist(df_in:DataFrame,col:String,bounds: Option[(Double,Double)]=None, Nbi
   val h=zbin.groupBy("bin").count.sort("bin")
   val p=h.select($"bin",(lit(zmin+dz/2)+h("bin")*lit(dz)).as("loc"),$"count").drop("bin")
   
+  df_savetxt(fn)
+
   p
 
 }
 
-def df_savetxt(df:DataFrame,file:String="df.txt")={
-  val A=df.collect
-  val append=false
-  val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file,append)))
-  for (r <- A) {
-    val s=r.toSeq.mkString("\t")
-    writer.write(s+"\n")
-  }
-
-  writer.close
-  println(file+ " written")
-}
