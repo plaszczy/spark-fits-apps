@@ -63,11 +63,12 @@ val timer=new Timer
 val df_src=spark.read.parquet(System.getenv("RUN2"))
 
 // select columns
-var df=df_src.select("objectId","ra","dec","mag_i_cModel","psf_fwhm_i","magerr_i_cModel","cModelFlux_i","cModelFluxErr_i").na.drop
+var df=df_src.select("objectId","ra","dec","clean","mag_i_cModel","snr_i_cModel","blendedness","extendedness").na.drop
 
 //filter
 df=df.filter($"mag_i_cModel"<25.3)
-
+//df=df.filter($"clean"===1).filter($"extendedness"===1)
+//.filter($"snr_i_cModel">3)
 
 //add theta-phi and healpixels
 df=df.withColumn("theta_s",F.radians(F.lit(90)-F.col("dec"))).withColumn("phi_s",F.radians("ra"))
