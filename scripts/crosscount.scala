@@ -34,7 +34,7 @@ class Timer (var t0:Double=System.nanoTime().toDouble,   var dt:Double=0)  {
 //Healpix
 class ExtPointing extends Pointing with java.io.Serializable
 val nside=131072
-sc.broadcast(nside)
+//val nside=65536
 
 val hp = new HealpixBase(nside, NESTED)
 
@@ -68,7 +68,7 @@ var df=df_src.select("objectId","ra","dec","clean","mag_i_cModel","snr_i_cModel"
 //filter
 df=df.filter($"mag_i_cModel"<25.3)
 //df=df.filter($"clean"===1).filter($"extendedness"===1)
-//.filter($"snr_i_cModel">3)
+//.filter($"snr_i_cModel">5)
 
 //add theta-phi and healpixels
 df=df.withColumn("theta_s",F.radians(F.lit(90)-F.col("dec"))).withColumn("phi_s",F.radians("ra"))
@@ -146,7 +146,7 @@ val single=cands.filter($"count"===F.lit(1))
 val n_out1=single.count
 
 
-println(f"|${Nt/1e6}%3.2f | ${Ns/1e6}%3.2f | ${nc/1e6}%3.2f (${nc.toFloat/Ns*100}%.1f%%) | ${n_out1/1e6}%3.2f (${n_out1.toFloat/Ns*100}%.1f%%)|")
+println(f"||${Nt/1e6}%3.2f || ${Ns/1e6}%3.2f || ${nc/1e6}%3.2f (${nc.toFloat/Ns*100}%.1f%%) || ${n_out1/1e6}%3.2f (${n_out1.toFloat/nc*100}%.1f%%)||")
 
 val dt=timer.step
 timer.print("completed")
