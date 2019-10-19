@@ -3,7 +3,7 @@ from pylab import *
 from tools import *
 from scipy.interpolate import interp1d
 
-x,y=loadtxt("dphi.txt",unpack=True)
+x,y=loadtxt("dtet.txt",unpack=True)
 figure()
 bar_outline(x,y)
 ylim(0.8*min(y),1.2*max(y))
