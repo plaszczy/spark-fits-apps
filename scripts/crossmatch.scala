@@ -63,43 +63,41 @@ val timer=new Timer
 val df_src=spark.read.parquet(System.getenv("RUN2"))
 
 // select columns
-var df=df_src.select("objectId","ra","dec","mag_i_cModel","psf_fwhm_i","magerr_i_cModel","cModelFlux_i","cModelFluxErr_i").na.drop
+var df=df_src.select("objectId","ra","dec","mag_i_cModel","psf_fwhm_i","magerr_i_cModel","cModelFlux_i","cModelFluxErr_i","clean","snr_i_cModel","blendedness","extendedness").na.drop
 
 //filter
 df=df.filter($"mag_i_cModel"<25.3)
 
-
 //add theta-phi and healpixels
 df=df.withColumn("theta_s",F.radians(F.lit(90)-F.col("dec"))).withColumn("phi_s",F.radians("ra"))
-df=df.withColumn("ipix",Ang2pix($"theta_s",$"phi_s")).drop("ra","dec")
+val source=df.withColumn("ipix",Ang2pix($"theta_s",$"phi_s")).drop("ra","dec")
 
 println("*** caching source: "+df.columns.mkString(", "))
-val n_in=df.cache.count
-println(f"input size=${n_in/1e6}%3.2f M")
+val Ns=source.cache.count
+println(f"input size=${Ns/1e6}%3.2f M")
 
 
 //ADD DUPLICATES
-val dfn=df.withColumn("neighbours",pix_neighbours($"ipix"))
+val dfn=source.withColumn("neighbours",pix_neighbours($"ipix"))
 
-val dup=new Array[org.apache.spark.sql.DataFrame](9)
+val dups=new Array[org.apache.spark.sql.DataFrame](9)
 
 for (i <- 0 to 7) {
   println(i)
   val df1=dfn.drop("ipix").withColumn("ipix",$"neighbours"(i))
   val dfclean1=df1.filter(not(df1("ipix")===F.lit(-1))).drop("neighbours")
-  dup(i)=dfclean1
+  dups(i)=dfclean1
 }
-dup(8)=df
+dups(8)=source
 
-val source=dup.reduceLeft(_.union(_))
+val dup=dups.reduceLeft(_.union(_))
 
-println("*** caching source+duplicates: "+source.columns.mkString(", "))
+println("*** caching source+duplicates: "+dup.columns.mkString(", "))
 
-val Ns=source.cache().count
+val Ndup=source.cache().count
 
-println(f"source+duplicates size=${Ns/1e6}%3.2f M")
+println(f"source+duplicates size=${Ndup/1e6}%3.2f M")
 
-df.unpersist
 
 /************************/
 //TARGET=cosmodc2
@@ -118,23 +116,20 @@ df=df.withColumn("ipix",Ang2pix($"theta_t",$"phi_t")).drop("ra","dec")
 val target=df
 
 println("*** caching target: "+target.columns.mkString(", "))
-
 val Nt=target.cache().count
-
 println(f"target size=${Nt/1e6}%3.2f M")
 
 ///////////////////////////////////////////
-
 //PAIRS
 //join by ipix: tous les candidats paires
-var matched=source.join(target,"ipix").drop("ipix")
+var matched=dup.join(target,"ipix").drop("ipix")
 
 println("joining on ipix: "+matched.columns.mkString(", "))
 val nmatch=matched.cache.count()
 println(f"#pair-associations=${nmatch/1e6}%3.2f M")
 
 //release mem
-source.unpersist
+dup.unpersist
 target.unpersist
 
 //add euclidian distance
@@ -168,36 +163,46 @@ val nc=ass.cache.count
 
 matched.unpersist
 
-//join with number of ass
-/*
-// combien de candidats par source
-val cands=matched.groupBy("objectId").count.withColumnRenamed("count","ncand")
-
-//stat ass
-println("caching #associations")
-var cand_stat=cands.cache.groupBy("ncand").count
-val nc=cand_stat.rdd.map(r => r.getLong(1)).reduce(_+_)
-
-cand_stat.withColumn("frac",$"count"/nc).sort("ncand").show
-
-println("join with ncands (caching)")
-val assoc=ass.cache.join(cands,"objectId")
- */
-
-
 //stat on # associations: unnecessary
 ass.groupBy("nass").count.withColumn("frac",$"count"/nc).sort("nass").show
-
 
 
 // ncand=1
 val df1=ass.filter($"nass"===F.lit(1)).withColumn("r",F.degrees($"d")*3600).withColumn("sigr",$"psf_fwhm_i"/2.355).withColumn("cumr",F.lit(1.0)-F.exp(-$"r"*$"r"/($"sigr"*$"sigr"*2.0))).drop("nass","d","psf_fwhm_i")
 
 println("*** caching df1: "+df1.columns.mkString(", "))
-val n_out1=df1.cache.count
+val nout1=df1.cache.count
 df1.printSchema
 
-println(f"IN=${n_in/1e6}%3.2f M MATCHED=${nc/1e6}%3.2f M (${nc.toFloat/n_in*100}%.1f%%) GOLD=${n_out1/1e6}%3.2f M (${n_out1.toFloat/n_in*100}%.1f%%)")
+println(f"||i<25.3|| ${Ns/1e6}%3.2f || ${nc/1e6}%3.2f (${nc.toFloat/Ns*100}%.1f%%) || ${nout1/1e6}%3.2f (${nout1.toFloat/nc*100}%.1f%%)||")
 
 val dt=timer.step
 timer.print("completed")
+
+
+//assoc statitics
+var df_src=source.filter( ($"clean"===1) && ($"extendedness"===1))
+var df_ass=ass.filter( ($"clean"===1) && ($"extendedness"===1))
+
+var N=df_src.count
+var Na=df_ass.count
+var N1=df_ass.filter($"nass"===F.lit(1)).count
+
+println(f"|| clean+extendedness || ${N/1e6}%3.2f || ${Na/1e6}%3.2f (${Na.toFloat/N*100}%.1f%%) || ${N1/1e6}%3.2f (${N1.toFloat/Na*100}%.1f%%)||")
+
+df_src=df_src.filter($"snr_i_cModel">5)
+df_ass=df_ass.filter($"snr_i_cModel">5)
+N=df_src.count
+Na=df_ass.count
+N1=df_ass.filter($"nass"===F.lit(1)).count
+println(f"|| SNR>5 || ${N/1e6}%3.2f || ${Na/1e6}%3.2f (${Na.toFloat/N*100}%.1f%%) || ${N1/1e6}%3.2f (${N1.toFloat/Na*100}%.1f%%)||")
+
+df_src=df_src.filter($"snr_i_cModel">10)
+df_ass=df_ass.filter($"snr_i_cModel">10)
+N=df_src.count
+Na=df_ass.count
+N1=df_ass.filter($"nass"===F.lit(1)).count
+println(f"|| SNR>10 || ${N/1e6}%3.2f || ${Na/1e6}%3.2f (${Na.toFloat/N*100}%.1f%%) || ${N1/1e6}%3.2f (${N1.toFloat/Na*100}%.1f%%)||")
+
+
+
