@@ -180,7 +180,7 @@ println(f"||i<${magcut}|| ${Ns/1e6}%3.2f || ${nc/1e6}%3.2f (${nc.toFloat/Ns*100}
 val dt=timer.step
 timer.print("completed")
 
-
+/*
 //assoc statitics
 var df_src=source.filter( ($"clean"===1) && ($"extendedness"===1))
 var df_ass=ass.filter( ($"clean"===1) && ($"extendedness"===1))
@@ -204,3 +204,4 @@ N=df_src.count
 Na=df_ass.count
 N1=df_ass.filter($"nass"===F.lit(1)).count
 println(f"|| SNR>10 || ${N/1e6}%3.2f || ${Na/1e6}%3.2f (${Na.toFloat/N*100}%.1f%%) || ${N1/1e6}%3.2f (${N1.toFloat/Na*100}%.1f%%)||")
+ */
