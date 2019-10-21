@@ -34,7 +34,6 @@ class Timer (var t0:Double=System.nanoTime().toDouble,   var dt:Double=0)  {
 //Healpix
 class ExtPointing extends Pointing with java.io.Serializable
 val nside=131072
-sc.broadcast(nside)
 
 val hp = new HealpixBase(nside, NESTED)
 
@@ -60,13 +59,15 @@ val timer=new Timer
 
 //SOURCE=run2
 
+val magcut=25.3
+
 val df_src=spark.read.parquet(System.getenv("RUN2"))
 
 // select columns
 var df=df_src.select("objectId","ra","dec","mag_i_cModel","psf_fwhm_i","magerr_i_cModel","cModelFlux_i","cModelFluxErr_i","clean","snr_i_cModel","blendedness","extendedness").na.drop
 
 //filter
-df=df.filter($"mag_i_cModel"<25.3)
+df=df.filter($"mag_i_cModel"<magcut)
 
 //add theta-phi and healpixels
 df=df.withColumn("theta_s",F.radians(F.lit(90)-F.col("dec"))).withColumn("phi_s",F.radians("ra"))
@@ -107,7 +108,7 @@ val df_t=spark.read.parquet(System.getenv("COSMODC2"))
 df=df_t.select("galaxy_id","ra","dec","mag_i").na.drop
 
 //filter
-df=df.filter($"mag_i"<25.3)
+df=df.filter($"mag_i"<magcut)
 
 //add healpixels
 df=df.withColumn("theta_t",F.radians(F.lit(90)-F.col("dec"))).withColumn("phi_t",F.radians("ra"))
@@ -174,7 +175,7 @@ println("*** caching df1: "+df1.columns.mkString(", "))
 val nout1=df1.cache.count
 df1.printSchema
 
-println(f"||i<25.3|| ${Ns/1e6}%3.2f || ${nc/1e6}%3.2f (${nc.toFloat/Ns*100}%.1f%%) || ${nout1/1e6}%3.2f (${nout1.toFloat/nc*100}%.1f%%)||")
+println(f"||i<${magcut}|| ${Ns/1e6}%3.2f || ${nc/1e6}%3.2f (${nc.toFloat/Ns*100}%.1f%%) || ${nout1/1e6}%3.2f (${nout1.toFloat/nc*100}%.1f%%)||")
 
 val dt=timer.step
 timer.print("completed")
@@ -197,12 +198,9 @@ Na=df_ass.count
 N1=df_ass.filter($"nass"===F.lit(1)).count
 println(f"|| SNR>5 || ${N/1e6}%3.2f || ${Na/1e6}%3.2f (${Na.toFloat/N*100}%.1f%%) || ${N1/1e6}%3.2f (${N1.toFloat/Na*100}%.1f%%)||")
 
-df_src=df_src.filter($"snr_i_cModel">10)
-df_ass=df_ass.filter($"snr_i_cModel">10)
+df_src=df_src.filter($"mag_i_cModel"<24.1)
+df_ass=df_ass.filter($"mag_i_cModel"<24.1)
 N=df_src.count
 Na=df_ass.count
 N1=df_ass.filter($"nass"===F.lit(1)).count
 println(f"|| SNR>10 || ${N/1e6}%3.2f || ${Na/1e6}%3.2f (${Na.toFloat/N*100}%.1f%%) || ${N1/1e6}%3.2f (${N1.toFloat/Na*100}%.1f%%)||")
-
-
-
