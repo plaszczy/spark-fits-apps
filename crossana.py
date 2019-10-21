@@ -26,12 +26,10 @@ def histo_plot(x,y,label=""):
 
     fwhm=float(x1)-float(x2)
 
-    stat=["N={:d}".format(int(sum(y))),r"$\mu={:g}$".format(xmean),r"$\sigma={:g}$".format(sqrt(vx)),"fwhm={:g}".format(fwhm)]
+    stat=["N={:d}".format(int(sum(y))),r"mean={:g}".format(xmean),"mode={:g}".format(x[imax]),r"$\sigma={:g}$".format(sqrt(vx)),"fwhm={:g}".format(fwhm)]
     ax=gca()
-    text(0.6,0.8,"\n".join(stat), horizontalalignment='left',transform=ax.transAxes)
+    text(0.7,0.75,"\n".join(stat), horizontalalignment='left',transform=ax.transAxes)
     show()
 
 x,y=loadtxt("df.txt",unpack=True)
 histo_plot(x,y)
-
-
