@@ -198,8 +198,8 @@ Na=df_ass.count
 N1=df_ass.filter($"nass"===F.lit(1)).count
 println(f"|| SNR>5 || ${N/1e6}%3.2f || ${Na/1e6}%3.2f (${Na.toFloat/N*100}%.1f%%) || ${N1/1e6}%3.2f (${N1.toFloat/Na*100}%.1f%%)||")
 
-df_src=df_src.filter($"mag_i_cModel"<24.1)
-df_ass=df_ass.filter($"mag_i_cModel"<24.1)
+df_src=df_src.filter($"snr_i_cModel">10)
+df_ass=df_ass.filter($"snr_i_cModel">10)
 N=df_src.count
 Na=df_ass.count
 N1=df_ass.filter($"nass"===F.lit(1)).count
