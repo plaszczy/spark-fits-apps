@@ -77,6 +77,8 @@ println("*** caching source: "+df.columns.mkString(", "))
 val Ns=source.cache.count
 println(f"input size=${Ns/1e6}%3.2f M")
 
+timer.step
+timer.print("source cache")
 
 //ADD DUPLICATES
 val dfn=source.withColumn("neighbours",pix_neighbours($"ipix"))
@@ -99,6 +101,8 @@ val Ndup=source.cache().count
 
 println(f"source+duplicates size=${Ndup/1e6}%3.2f M")
 
+timer.step
+timer.print("duplicates cache")
 
 /************************/
 //TARGET=cosmodc2
@@ -120,6 +124,9 @@ println("*** caching target: "+target.columns.mkString(", "))
 val Nt=target.cache().count
 println(f"target size=${Nt/1e6}%3.2f M")
 
+timer.step
+timer.print("target cache")
+
 ///////////////////////////////////////////
 //PAIRS
 //join by ipix: tous les candidats paires
@@ -132,6 +139,12 @@ println(f"#pair-associations=${nmatch/1e6}%3.2f M")
 //release mem
 dup.unpersist
 target.unpersist
+
+timer.step
+timer.print("join")
+
+
+
 
 //add euclidian distance
 //matched=matched.withColumn("d",F.hypot(matched("phi_t")-matched("phi_s"),F.sin((matched("theta_t")+matched("theta_s"))/2)*(matched("theta_t")-matched("theta_s"))))
@@ -160,6 +173,9 @@ val ass=spark.createDataFrame(ass_rdd.map{ case (k,(r,c))=> Row.fromSeq(r.toSeq+
 
 println("*** reducebykey id_source")
 val nc=ass.cache.count
+
+timer.step
+timer.print("reducebykey")
 
 
 matched.unpersist
