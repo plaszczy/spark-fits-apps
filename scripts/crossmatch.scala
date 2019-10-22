@@ -196,7 +196,11 @@ println(f"||i<${magcut}|| ${Ns/1e6}%3.2f || ${nc/1e6}%3.2f (${nc.toFloat/Ns*100}
 val dt=timer.step
 timer.print("completed")
 
-//df1=df1.filter(F.abs(($"cModelFlux_i"-$"flux_i")/$"cModelFluxErr_i")<3)
+//extra cuts
+/*
+df1=df1.withColumn("flux_i",F.pow(10.0,-($"mag_i"-31.4)/2.5))
+df1=df1.filter(F.abs(($"cModelFlux_i"-$"flux_i")/$"cModelFluxErr_i")<3)
+ */
 
 
 /*
