@@ -109,7 +109,7 @@ timer.print("duplicates cache")
 
 val df_t=spark.read.parquet(System.getenv("COSMODC2"))
 // select columns
-df=df_t.select("galaxy_id","ra","dec","mag_i").na.drop
+df=df_t.select("galaxy_id","ra","dec","mag_i").withColumn("flux_i",F.pow(10.0,-($"mag_i"-31.4)/2.5)).na.drop
 
 //filter
 df=df.filter($"mag_i"<magcut)
@@ -195,6 +195,9 @@ println(f"||i<${magcut}|| ${Ns/1e6}%3.2f || ${nc/1e6}%3.2f (${nc.toFloat/Ns*100}
 
 val dt=timer.step
 timer.print("completed")
+
+//val df2=df1.filter(F.abs(($"cModelFlux_i"-$"flux_i")/$"cModelFluxErr_i")<3)
+
 
 /*
 //assoc statitics

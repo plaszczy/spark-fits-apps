@@ -9,7 +9,7 @@ def histo_file(fn="df.txt",label=""):
     figure()
     bar_outline(x,y)
     ylim(0.8*min(y),1.2*max(y))
-    #semilogy()
+    semilogy()
     axvline(0,c='k',lw=0.5)
     xlabel(label)
 
