@@ -109,7 +109,7 @@ timer.print("duplicates cache")
 
 val df_t=spark.read.parquet(System.getenv("COSMODC2"))
 // select columns
-df=df_t.select("galaxy_id","ra","dec","mag_i").withColumn("flux_i",F.pow(10.0,-($"mag_i"-31.4)/2.5)).na.drop
+df=df_t.select("galaxy_id","ra","dec","mag_i").na.drop
 
 //filter
 df=df.filter($"mag_i"<magcut)
@@ -185,7 +185,7 @@ ass.groupBy("nass").count.withColumn("frac",$"count"/nc).sort("nass").show
 
 
 // ncand=1
-val df1=ass.filter($"nass"===F.lit(1)).withColumn("r",F.degrees($"d")*3600).withColumn("sigr",$"psf_fwhm_i"/2.355).withColumn("cumr",F.lit(1.0)-F.exp(-$"r"*$"r"/($"sigr"*$"sigr"*2.0))).drop("nass","d","psf_fwhm_i")
+var df1=ass.filter($"nass"===F.lit(1)).withColumn("r",F.degrees($"d")*3600).withColumn("sigr",$"psf_fwhm_i"/2.355).withColumn("cumr",F.lit(1.0)-F.exp(-$"r"*$"r"/($"sigr"*$"sigr"*2.0))).drop("nass","d","psf_fwhm_i")
 
 println("*** caching df1: "+df1.columns.mkString(", "))
 val nout1=df1.cache.count
@@ -196,7 +196,7 @@ println(f"||i<${magcut}|| ${Ns/1e6}%3.2f || ${nc/1e6}%3.2f (${nc.toFloat/Ns*100}
 val dt=timer.step
 timer.print("completed")
 
-//val df2=df1.filter(F.abs(($"cModelFlux_i"-$"flux_i")/$"cModelFluxErr_i")<3)
+//df1=df1.filter(F.abs(($"cModelFlux_i"-$"flux_i")/$"cModelFluxErr_i")<3)
 
 
 /*
