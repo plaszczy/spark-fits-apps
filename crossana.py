@@ -5,7 +5,7 @@ from scipy.interpolate import interp1d
 
 
 def histo_file(fn="df.txt",label=""):
-    x,y=loadtxt(fn,unpack=True)
+    b,x,y=loadtxt(fn,unpack=True)
     figure()
     bar_outline(x,y)
     ylim(0.8*min(y),1.2*max(y))
@@ -38,9 +38,9 @@ def histo_file(fn="df.txt",label=""):
 
     fwhm=float(x1)-float(x2)
 
-    stat=["N={:d}".format(int(sum(y))),r"mean={:g}".format(xmean),"mode={:g}".format(x[imax]),r"$\sigma={:g}$".format(sqrt(vx)),"fwhm={:g}".format(fwhm),r"skew={:g}".format(S)]
+    stat=["N={:d}".format(int(sum(y))),"mode={:g}".format(x[imax]),"mean={:g}".format(xmean),"median={:g}".format(median(x)),"stddev={:g}".format(sqrt(vx)),"fwhm={:g}".format(fwhm),r"skewn={:g}".format(S)]
     ax=gca()
     text(0.7,0.7,"\n".join(stat), horizontalalignment='left',transform=ax.transAxes)
 
     show()
-    return x,y
+    return b,x,y

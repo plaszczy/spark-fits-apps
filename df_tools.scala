@@ -38,7 +38,7 @@ def df_hist(df_in:DataFrame,col:String,bounds: Option[(Double,Double)]=None, Nbi
   val zbin=dff.select(F.col(col),(((dff(col)-lit(zmin)))/dz).cast(IntegerType).as("bin"))
 
   val h=zbin.groupBy("bin").count.sort("bin")
-  val p=h.select($"bin",(lit(zmin+dz/2)+h("bin")*lit(dz)).as("loc"),$"count").filter(not($"bin"===Nbins)).drop("bin")
+  val p=h.select($"bin",(lit(zmin+dz/2)+h("bin")*lit(dz)).as("loc"),$"count").filter(not($"bin"===Nbins))
   
   df_savetxt(p,fn)
 
