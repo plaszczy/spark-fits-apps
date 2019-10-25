@@ -17,10 +17,12 @@ df1=df1.filter($"r"/$"sigpos"<15)
 //dphi
 df_hist(df1.withColumn("dphi",F.degrees($"phi_s"-$"phi_t")*3600),"dphi",Some(-5.0,5.0),Nbins=1000,fn="dphi.txt")
 
-df_hist(df1.withColumn("dphipull",F.degrees($"phi_s"-$"phi_t")*3600/$"sigpos"),"dphipull",Some(-15.0,15.0),Nbins=1000,fn="pullphi.txt")
+df_hist(df1.withColumn("dphipull",F.degrees($"phi_s"-$"phi_t")*3600/$"sigpos"),"dphipull",Some(-15.0,15.0),Nbins=1001,fn="pullphi.txt")
 
 //dtheta
-df_hist(df1.withColumn("dtet",F.degrees($"theta_s"-$"theta_t")*3600),"dtet",Some(-5.0,5.0),Nbins=1000,fn="dtet.txt")
+df_hist(df1.withColumn("dtet",F.degrees($"theta_s"-$"theta_t")*3600),"dtet",Some(-5.0,5.0),Nbins=1001,fn="dtet.txt")
+
+df_hist(df1.withColumn("dtet",F.degrees(F.cos($"theta_s")-F.cos($"theta_t"))*3600),"dtet",Some(-5.0,5.0),Nbins=1001,fn="dctet.txt")
 
 df_hist(df1.withColumn("dtetpull",F.degrees($"theta_s"-$"theta_t")*3600/$"sigpos"),"dtetpull",Some(-15.0,15.0),Nbins=1000,fn="pulltet.txt")
 
