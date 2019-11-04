@@ -34,16 +34,12 @@ case class HealpixGrid(
     nside : Int, hp : HealpixBase, ptg : ExtPointing) {
 
   /**
-    * Map (RA/Dec) to Healpix pixel index
-    * @param ra : (Double)
-    *   RA coordinate
-    * @param dec : (Double)
-    *   Dec coordinate
+    * Map spherical theta/phi to Healpix pixel index
     *
     */
-  def index(ra : Double, dec : Double) : Long = {
-    ptg.theta = ra
-    ptg.phi = dec
+  def index(theta: Double, phi : Double) : Long = {
+    ptg.theta = theta
+    ptg.phi = phi
     hp.ang2pix(ptg)
   }
 }
