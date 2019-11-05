@@ -1,27 +1,27 @@
 
 :load df_tools.scala
 
-
 var df1=spark.read.parquet("/lsst/DC2/df1.parquet")
 
-df1=df1.withColumn("flux_i",F.pow(10.0,-($"mag_i"-31.4)/2.5)).withColumn("dflux",$"cModelFlux_i"-$"flux_i").withColumn("sigpos",$"sigr"/$"snr_i_cModel").drop("sigr")
+df1=df1.withColumn("flux_i",F.pow(10.0,-($"mag_i"-31.4)/2.5)).withColumn("dflux",$"cModelFlux_i"-$"flux_i").withColumn("sigpos",$"sigr"/$"snr_i_cModel").drop("sigr").withColumn("dphi",F.degrees(F.sin(($"theta_s"+$"theta_t")/2)*($"phi_s"-$"phi_t"))*3600)
+
 df1.cache.count
 
 //quality cuts
 
 df1=df1.filter( ($"clean"===1) && ($"extendedness"===1))
 df1=df1.filter( ($"r"<1)
-df1=df1.filter( $"snr_i_cModel">5)
+df1=df1.filter( $"snr_i_cModel">1)
 df1=df1.filter($"r"/$"sigpos"<15)
 
-//dphi = cos(dec) dRA
-val df2=df1.withColumn("dphi",F.degrees(F.sin(($"theta_s"+$"theta_r")/2)*($"phi_s"-$"phi_t"))*3600)
-df_hist(df2,"dphi",Some(-5.0,5.0),Nbins=1001,fn="dphi.txt")
-df_hist(df2.withColumn("dphipull",$"dphi"/$"sigr"),"dphipull",Some(-15.0,15.0),Nbins=1001,fn="phipull.txt")
 
 //dtheta=dDEC
-df_hist(df1.withColumn("dtet",F.degrees($"theta_s"-$"theta_t")*3600),"dtet",Some(-5.0,5.0),Nbins=1001,fn="dtet.txt")
-df_hist(df1.withColumn("dtetpull",F.degrees($"theta_s"-$"theta_t")*3600/$"sigpos"),"dtetpull",Some(-15.0,15.0),Nbins=1001,fn="pulltet.txt")
+df_hist(df1.withColumn("ddec",F.degrees($"theta_s"-$"theta_t")*3600),"ddec",Some(-5.0,5.0),Nbins=1001,fn="ddec.txt")
+df_hist(df1.withColumn("pulldec",F.degrees($"theta_s"-$"theta_t")*3600/$"sigpos"),"pulldec",Some(-15.0,15.0),Nbins=1001,fn="pulldec.txt")
+
+//dphi = cos(dec) dRA
+df_hist(df1,"dphi",Some(-5.0,5.0),Nbins=1001,fn="dcra.txt")
+df_hist(df1.withColumn("dphipull",$"dphi"/$"sigpos"),"dphipull",Some(-15.0,15.0),Nbins=1001,fn="pullcra.txt")
 
 //r
 df_hist(df1,"r",Some(0,7),Nbins=1001,fn="r.txt")

@@ -4,9 +4,10 @@ from tools import *
 from scipy.interpolate import interp1d
 
 
-def histo_file(fn="df.txt",label=""):
+def histo_file(fn="df.txt",label="",newfig=True):
     b,x,y=loadtxt(fn,unpack=True)
-    figure()
+    if newfig:
+        figure()
     bar_outline(x,y)
     ylim(0.8*min(y),1.2*max(y))
     semilogy()
@@ -20,6 +21,8 @@ def histo_file(fn="df.txt",label=""):
     vx=sum(xx**2*f)
     sig=sqrt(vx)
     S=sum((xx/sig)**3*f)
+
+    K=sum((xx/sig)**4*f)-3
 
     imax=argmax(y)
 
@@ -38,7 +41,7 @@ def histo_file(fn="df.txt",label=""):
 
     fwhm=float(x1)-float(x2)
 
-    stat=["N={:d}".format(int(sum(y))),"mode={:g}".format(x[imax]),"mean={:g}".format(xmean),"median={:g}".format(median(x)),"stddev={:g}".format(sqrt(vx)),"fwhm={:g}".format(fwhm),r"skewn={:g}".format(S)]
+    stat=["N={:d}".format(int(sum(y))),"mode={:g}".format(x[imax]),"mean={:g}".format(xmean),"stdev={:g}".format(sqrt(vx)),"fwhm={:g}".format(fwhm),r"skew={:g}".format(S),r"kurt={:g}".format(K)]
     ax=gca()
     text(0.7,0.7,"\n".join(stat), horizontalalignment='left',transform=ax.transAxes)
 
