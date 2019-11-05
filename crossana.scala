@@ -16,11 +16,11 @@ df1=df1.filter($"r"/$"sigpos"<15)
 
 
 //dtheta=dDEC
-df_hist(df1.withColumn("ddec",F.degrees($"theta_s"-$"theta_t")*3600),"ddec",Some(-5.0,5.0),Nbins=1001,fn="ddec.txt")
+df_hist(df1.withColumn("ddec",F.degrees($"theta_s"-$"theta_t")*3600),"ddec",Some(-6.0,6.0),Nbins=1001,fn="ddec.txt")
 df_hist(df1.withColumn("pulldec",F.degrees($"theta_s"-$"theta_t")*3600/$"sigpos"),"pulldec",Some(-15.0,15.0),Nbins=1001,fn="pulldec.txt")
 
 //dphi = cos(dec) dRA
-df_hist(df1,"dphi",Some(-5.0,5.0),Nbins=1001,fn="dcra.txt")
+df_hist(df1,"dphi",Some(-6.0,6.0),Nbins=1001,fn="dcra.txt")
 df_hist(df1.withColumn("dphipull",$"dphi"/$"sigpos"),"dphipull",Some(-15.0,15.0),Nbins=1001,fn="pullcra.txt")
 
 //r

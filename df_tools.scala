@@ -2,7 +2,8 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.{functions=>F}
 import org.apache.spark.sql.types._
 import java.io._
-
+import java.util.Locale
+Locale.setDefault(Locale.US)
 
 def df_minmax(df:DataFrame,col:String)=df.select(F.min(col),F.max(col)).first()
 
@@ -40,9 +41,25 @@ def df_hist(df_in:DataFrame,col:String,bounds: Option[(Double,Double)]=None, Nbi
   val h=zbin.groupBy("bin").count.sort("bin")
   val p=h.select($"bin",(lit(zmin+dz/2)+h("bin")*lit(dz)).as("loc"),$"count").filter(not($"bin"===Nbins))
   
-  df_savetxt(p,fn)
+  //df_savetxt(p,fn)
 
-  p
+  //writing file
+  val a=p.rdd.map(r => (r.getInt(0),r.getDouble(1),r.getLong(2))).collect
+
+ val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fn,false)))
+  for (e<-a) {
+    val bin:Int=e._1
+    val loc:Double=e._2
+    val cnt:Long=e._3
+    val s=f"$bin%d\t$loc%f\t$cnt%d\n"
+    writer.write(s)
+  }
+
+  writer.close
+  println(fn+ " written")
+
+
+
 
 }
 
