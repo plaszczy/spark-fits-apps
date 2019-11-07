@@ -3,17 +3,17 @@
 
 var df1=spark.read.parquet("/lsst/DC2/df1.parquet")
 
-df1=df1.withColumn("flux_i",F.pow(10.0,-($"mag_i"-31.4)/2.5)).withColumn("dflux",$"cModelFlux_i"-$"flux_i").withColumn("sigpos",$"sigr"/$"snr_i_cModel").drop("sigr").withColumn("dphi",F.degrees(F.sin(($"theta_s"+$"theta_t")/2)*($"phi_s"-$"phi_t"))*3600)
+df1=df1.withColumn("flux_i",F.pow(10.0,-($"mag_i"-31.4)/2.5)).withColumn("dflux",$"cModelFlux_i"-$"flux_i").withColumn("sigpos",$"sigr"/$"snr_i_cModel").drop("sigr").withColumn("dphi",F.degrees(F.sin(($"theta_s"+$"theta_t")/2)*($"phi_s"-$"phi_t"))*3600).withColumn("dmag",$"mag_i_cModel"-$"mag_i")
+
+df1=df1.filter($"snr_i_cModel">1) 
+df1=df1.filter($"r"<1) 
+df1=df1.filter((F.abs($"dmag")<1))
+
 
 df1.cache.count
 
 //quality cuts
-
 df1=df1.filter( ($"clean"===1) && ($"extendedness"===1))
-df1=df1.filter( ($"r"<1)
-df1=df1.filter( $"snr_i_cModel">1)
-df1=df1.filter($"r"/$"sigpos"<15)
-
 
 //dtheta=dDEC
 df_hist(df1.withColumn("ddec",F.degrees($"theta_s"-$"theta_t")*3600),"ddec",Some(-6.0,6.0),Nbins=1001,fn="ddec.txt")
@@ -29,8 +29,8 @@ df_hist(df1.withColumn("rnorm",$"r"/$"sigpos"),"rnorm",Some(0,25),Nbins=1001,fn=
 df_hist(df1,"cumr",Some(0,1),Nbins=1001,fn="cumr.txt")
 
 //mags
-df_hist(df1.withColumn("dmag",$"mag_i_cModel"-$"mag_i"),"dmag",Some(-15,10),Nbins=1001,fn="dmag.txt")
-df_hist(df1.withColumn("pullmag",($"mag_i_cModel"-$"mag_i")/$"magerr_i_cModel"),"pullmag",Some(-300,150),Nbins=1001,fn="pullmag.txt")
+df_hist(df1,"dmag",Some(-15,10),Nbins=1001,fn="dmag.txt")
+df_hist(df1.withColumn("pullmag",$"dmag"/$"magerr_i_cModel"),"pullmag",Some(-300,150),Nbins=1001,fn="pullmag.txt")
 
 //flux
 df_hist(df1,"dflux",Some(-50000,50000),Nbins=1001,fn="dflux.txt")
