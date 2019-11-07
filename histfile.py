@@ -3,9 +3,7 @@ from pylab import *
 from tools import *
 from scipy.interpolate import interp1d
 
-
-def df_histfile(fn="df.txt",label="",newFig=True,doStat=True):
-    b,x,y=loadtxt(fn,unpack=True)
+def histstat(x,y,label="",newFig=True,doStat=True):
     if newFig:
         figure()
     bar_outline(x,y,label=label)
@@ -44,7 +42,12 @@ def df_histfile(fn="df.txt",label="",newFig=True,doStat=True):
         ax=gca()
         text(0.7,0.7,"\n".join(stat), horizontalalignment='left',transform=ax.transAxes)
 
-
-
     show()
     return b,x,y
+
+
+
+def histfile(fn="df.txt",**kwargs):
+
+    b,x,y=loadtxt(fn,unpack=True)
+    return  hist_stat(x,y,**kwargs)

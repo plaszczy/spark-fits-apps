@@ -14,8 +14,8 @@ df1=df1.withColumn("flux_i",F.pow(10.0,-(df1["mag_i"]-31.4)/2.5))
 df1=df1.withColumn("dflux",df1["cModelFlux_i"]-df1["flux_i"])
 df1=df1.withColumn("dmag",df1["mag_i_cModel"]-df1["mag_i"])
 df1=df1.withColumn("sigpos",df1["sigr"]/df1["snr_i_cModel"]).drop("sigr")
-df1=df1.withColumn("dphi",F.degrees(F.sin((df1["theta_s"]+df1["theta_t"])/2)*(df1["phi_s"]-df1["phi_t"]))*3600)
-df1=df1.withColumn("dtet",F.degrees(df1["theta_s"]-df1["theta_t"])*3600)
+df1=df1.withColumn("dx",F.degrees(F.sin((df1["theta_s"]+df1["theta_t"])/2)*(df1["phi_s"]-df1["phi_t"]))*3600)
+df1=df1.withColumn("dy",F.degrees(df1["theta_s"]-df1["theta_t"])*3600)
 df1.cache().count()
 
 x,y,m=df_histplot2(df1,"dmag","r",Nbin1=100,Nbin2=100,bounds=((-2,2),(0,5))) 
@@ -29,7 +29,7 @@ df1=df1.filter((F.abs(df1["dmag"]<1))
 df_histplot,"dtet",Nbins=1000,bounds=(-5,5))
 
 
-x,y,m=df_histplot2(df1,"dtet","dphi",Nbin1=100,Nbin2=100,bounds=((-1,1),(-1,1))) 
+x,y,m=df_histplot2(df1,"dx","dy",Nbin1=100,Nbin2=100,bounds=((-1,1),(-1,1))) 
 clf()
 imshowXY(x,y,log10(1+m))
 
