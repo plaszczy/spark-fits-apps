@@ -1,3 +1,4 @@
+
 import org.apache.spark.sql.{functions=>F}
 import org.apache.spark.sql.Row
 
@@ -19,6 +20,9 @@ Logger.getLogger("akka").setLevel(Level.OFF)
 
 //Timer
 class Timer (var t0:Double=System.nanoTime().toDouble,   var dt:Double=0)  {
+
+  def time:Double=System.nanoTime().toDouble
+
   def step:Double={
     val t1 = System.nanoTime().toDouble
     dt=(t1-t0)/1e9
@@ -34,6 +38,7 @@ class Timer (var t0:Double=System.nanoTime().toDouble,   var dt:Double=0)  {
 //Healpix
 class ExtPointing extends Pointing with java.io.Serializable
 val nside=131072
+//val nside=65536
 
 val hp = new HealpixBase(nside, NESTED)
 
@@ -56,10 +61,12 @@ val pix_neighbours=spark.udf.register("pix_neighbours",(ipix:Long)=>grid.neighbo
 
 /************************/
 val timer=new Timer
+val start=timer.time
 
 //SOURCE=run2
 
 val magcut=25.3
+val snrcut=1.0
 
 val df_src=spark.read.parquet(System.getenv("RUN2"))
 
@@ -67,7 +74,7 @@ val df_src=spark.read.parquet(System.getenv("RUN2"))
 var df=df_src.select("objectId","ra","dec","mag_i_cModel","psf_fwhm_i","magerr_i_cModel","cModelFlux_i","cModelFluxErr_i","clean","snr_i_cModel","blendedness","extendedness").na.drop
 
 //filter
-df=df.filter($"mag_i_cModel"<magcut)
+df=df.filter($"mag_i_cModel"<magcut).filter($"snr_i_cModel">snrcut)
 
 //add theta-phi and healpixels
 df=df.withColumn("theta_s",F.radians(F.lit(90)-F.col("dec"))).withColumn("phi_s",F.radians("ra"))
@@ -132,7 +139,7 @@ timer.print("target cache")
 //join by ipix: tous les candidats paires
 var matched=dup.join(target,"ipix").drop("ipix")
 
-println("joining on ipix: "+matched.columns.mkString(", "))
+println("==> joining on ipix: "+matched.columns.mkString(", "))
 val nmatch=matched.cache.count()
 println(f"#pair-associations=${nmatch/1e6}%3.2f M")
 
@@ -185,7 +192,7 @@ ass.groupBy("nass").count.withColumn("frac",$"count"/nc).sort("nass").show
 
 
 // ncand=1
-var df1=ass.filter($"nass"===F.lit(1)).withColumn("r",F.degrees($"d")*3600).withColumn("sigr",$"psf_fwhm_i"/2.355).withColumn("cumr",F.lit(1.0)-F.exp(-$"r"*$"r"/($"sigr"*$"sigr"*2.0))).drop("nass","d","psf_fwhm_i")
+var df1=ass.filter($"nass"===F.lit(1)).withColumn("r",F.degrees($"d")*3600).drop("nass","d")
 
 println("*** caching df1: "+df1.columns.mkString(", "))
 val nout1=df1.cache.count
@@ -193,8 +200,11 @@ df1.printSchema
 
 println(f"||i<${magcut}|| ${Ns/1e6}%3.2f || ${nc/1e6}%3.2f (${nc.toFloat/Ns*100}%.1f%%) || ${nout1/1e6}%3.2f (${nout1.toFloat/nc*100}%.1f%%)||")
 
-val dt=timer.step
+timer.step
 timer.print("completed")
+
+val stop=timer.time
+println(f"TOT TIME=${stop-start}")
 
 //extra cuts
 /*
