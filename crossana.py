@@ -18,23 +18,28 @@ df1=df1.withColumn("dx",F.degrees(F.sin((df1["theta_s"]+df1["theta_t"])/2)*(df1[
 df1=df1.withColumn("dy",F.degrees(df1["theta_s"]-df1["theta_t"])*3600)
 df1.cache().count()
 
-x,y,m=df_histplot2(df1,"dmag","r",Nbin1=100,Nbin2=100,bounds=((-2,2),(0,5))) 
-clf()
-imshowXY(x,y,log10(m+1))    
+# rcuts
+df1=df1.filter(df1["r"]<1.5) 
 
-#extra cuts
-df1=df1.filter(df1["r"]<1) 
-df1=df1.filter((F.abs(df1["dmag"]<1))
-
-df_histplot,"dtet",Nbins=1000,bounds=(-5,5))
-
-
-x,y,m=df_histplot2(df1,"dx","dy",Nbin1=100,Nbin2=100,bounds=((-1,1),(-1,1))) 
+x,y,m=df_histplot2(df1,"dx","dy",Nbin1=100,Nbin2=100,bounds=((-1.5,1.5),(-1.5,1.5))) 
 clf()
 imshowXY(x,y,log10(1+m))
 
 
+df_histplot,"dtet",Nbins=1000,bounds=(-5,5))
+
+
+
+
+
+x,y,m=df_histplot2(df1,"dmag","r",Nbin1=100,Nbin2=100,bounds=((-2,2),(0,5))) 
+clf()
+imshowXY(x,y,log10(m+1))    
+
 #flux
+
+df1=df1.filter((F.abs(df1["dmag"]<1))
+
 x,y,m=df_histplot2(df1,"dflux","r",Nbin1=100,Nbin2=100,bounds=((-3000,3000),(0,1))) 
 clf()
 imshowXY(x,y,log10(1+m))
