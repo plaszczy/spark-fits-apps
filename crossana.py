@@ -45,7 +45,7 @@ p3=df_histplot(df1.filter((df1["dflux"]<200)&(df1["dflux"]>-250)),"dx",Nbins=100
 histstat(p1['loc'].values,1000*p1['count'].values/sum(p1['count'].values),log=False) 
 histstat(p2['loc'].values,1000*p2['count'].values/sum(p2['count'].values),log=False,newFig=False,doStat=False)
 histstat(p3['loc'].values,1000*p3['count'].values/sum(p3['count'].values),log=False,newFig=False,doStat=False)
-
+ylim(0,0.2)
 xlabel("dx")
 
 #flux
