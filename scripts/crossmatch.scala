@@ -193,7 +193,7 @@ ass.groupBy("nass").count.withColumn("frac",$"count"/nc).sort("nass").show
 
 
 // ncand=1
-var df1=ass.filter($"nass"===F.lit(1)).withColumn("r",F.degrees($"d")*3600).drop("nass","d")
+var df1=ass.filter($"nass"===F.lit(1)).withColumn("r",F.degrees($"d")*3600).withColumn("sigr",$"psf_fwhm_i"/2.355).drop("nass","d")
 
 println("*** caching df1: "+df1.columns.mkString(", "))
 val nout1=df1.cache.count
@@ -205,7 +205,7 @@ timer.step
 timer.print("completed")
 
 val stop=timer.time
-println(f"TOT TIME=${stop-start}")
+println(f"TOT TIME=${stop-start}*1e-9")
 
 //extra cuts
 /*
