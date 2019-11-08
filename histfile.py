@@ -3,12 +3,13 @@ from pylab import *
 from tools import *
 from scipy.interpolate import interp1d
 
-def histstat(x,y,label="",newFig=True,doStat=True):
+def histstat(x,y,label="",newFig=True,doStat=True,log=True):
     if newFig:
         figure()
     bar_outline(x,y,label=label)
     ylim(0.8*min(y),1.2*max(y))
-    semilogy()
+    if log:
+        semilogy()
     axvline(0,c='k',lw=0.5)
     xlabel(label)
         
@@ -43,7 +44,7 @@ def histstat(x,y,label="",newFig=True,doStat=True):
         text(0.7,0.7,"\n".join(stat), horizontalalignment='left',transform=ax.transAxes)
 
     show()
-    return b,x,y
+    return x,y
 
 
 

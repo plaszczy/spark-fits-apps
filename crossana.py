@@ -1,5 +1,6 @@
 from df_tools import * 
 from tools import *
+from histfile import *
 
 
 df1=spark.read.parquet("/lsst/DC2/df1.parquet")
@@ -16,9 +17,12 @@ df1=df1.withColumn("dmag",df1["mag_i_cModel"]-df1["mag_i"])
 df1=df1.withColumn("sigpos",df1["sigr"]/df1["snr_i_cModel"]).drop("sigr")
 df1=df1.withColumn("dx",F.degrees(F.sin((df1["theta_s"]+df1["theta_t"])/2)*(df1["phi_s"]-df1["phi_t"]))*3600)
 df1=df1.withColumn("dy",F.degrees(df1["theta_s"]-df1["theta_t"])*3600)
+df1=df1.withColumn("psf_x",F.degrees(F.sin((df1["theta_s"]+df1["theta_t"])/2)*(df1["phi_s"]-df1["phi_t"]))*3600)
+df1=df1.withColumn("psf_y",F.degrees(df1["theta_s"]-df1["theta_t"])*3600)
+
 df1.cache().count()
 
-# rcuts
+# pixel border
 df1=df1.filter(df1["r"]<1.5) 
 
 x,y,m=df_histplot2(df1,"dx","dy",Nbin1=100,Nbin2=100,bounds=((-1.5,1.5),(-1.5,1.5))) 
@@ -26,24 +30,22 @@ clf()
 imshowXY(x,y,log10(1+m))
 
 
-df_histplot,"dtet",Nbins=1000,bounds=(-5,5))
+#clean with flux
+x,y,m=df_histplot2(df1,"dflux","r",Nbin1=100,Nbin2=100,bounds=((-500,500),(0,1.5))) 
 
-
-
-
-
-x,y,m=df_histplot2(df1,"dmag","r",Nbin1=100,Nbin2=100,bounds=((-2,2),(0,5))) 
-clf()
 imshowXY(x,y,log10(m+1))    
 
+#clean with flux
+
+p1=df_histplot(df1,"dx",Nbins=1000,bounds=(-5,5))
+p2=df_histplot(df1.filter((df1["dflux"]<500)&(df1["dflux"]>-500)),"dx",Nbins=1000,bounds=(-5,5))
+p3=df_histplot(df1.filter((df1["dflux"]<200)&(df1["dflux"]>-250)),"dx",Nbins=1000,bounds=(-5,5))
+
+
+histstat(p1['loc'].values,1000*p1['count'].values/sum(p1['count'].values),log=False) 
+histstat(p2['loc'].values,1000*p2['count'].values/sum(p2['count'].values),log=False,newFig=False,doStat=False)
+histstat(p3['loc'].values,1000*p3['count'].values/sum(p3['count'].values),log=False,newFig=False,doStat=False)
+
+xlabel("dx")
+
 #flux
-
-df1=df1.filter((F.abs(df1["dmag"]<1))
-
-x,y,m=df_histplot2(df1,"dflux","r",Nbin1=100,Nbin2=100,bounds=((-3000,3000),(0,1))) 
-clf()
-imshowXY(x,y,log10(1+m))
-xlabel(r"$\Delta DEC$")
-ylabel(r"$\cos(DEC).\Delta RA$")
-
-#outliers
