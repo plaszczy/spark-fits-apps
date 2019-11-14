@@ -3,18 +3,8 @@ from pylab import *
 from tools import *
 from scipy.interpolate import interp1d
 
-def hist_stat(x,y,label="",newFig=True,doStat=True,log=True):
-    if newFig:
-        figure()
-    bar_outline(x,y,label=label)
-    ylim(0.8*min(y),1.2*max(y))
-    if log:
-        semilogy()
-    axvline(0,c='k',lw=0.5)
-    xlabel(label)
-        
-    if doStat:
-        #stats
+
+def addStat(x,y):
         f=y/sum(y)
         xmean=sum(x*f)
         xx=x-xmean
@@ -42,6 +32,21 @@ def hist_stat(x,y,label="",newFig=True,doStat=True,log=True):
         print(stat)
         ax=gca()
         text(0.7,0.7,"\n".join(stat), horizontalalignment='left',transform=ax.transAxes)
+
+
+
+def hist_stat(x,y,label="",newFig=True,doStat=True,log=True):
+    if newFig:
+        figure()
+    bar_outline(x,y,label=label)
+    ylim(0.8*min(y),1.2*max(y))
+    if log:
+        semilogy()
+    axvline(0,c='k',lw=0.5)
+    xlabel(label)
+        
+    if doStat:
+        addStat(x,y)
 
     show()
     return x,y

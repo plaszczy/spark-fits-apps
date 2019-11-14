@@ -53,9 +53,36 @@ xlabel("dx [arcsec]")
 #flux distribs
 
 #psf
+df1=df1.filter(df1.r<0.6)
+
+
 x,y,m=df_histplot2(df1,"psf_x","psf_y",Nbin1=100,Nbin2=100,bounds=((-1,1),(-1,1))
 
+figure()
+X,Y=meshgrid(x,y)
+R=sqrt(X**2+Y**2)
+plot(R.flat,m.flat/amax(m),'k+')
+xlim(0)
+ylim(0)
+axhline(0.5,ls='--',c='k')
 
+r=linspace(0,2.8,100)
+fwhm=0.67*2
+
+sig=fwhm/2.355
+plot(r,exp(-r**2/(2*sig**2)),label="Gaussian")
+
+
+for b in [4.765,2] :
+    a=fwhm/(2*sqrt(2**(1/b)-1))
+    plot(r,1./(1+(r/a)**2)**b,label=r"Moffat $(\beta={})$)".format(b))
+
+
+#histo dr?
 df1=df1.withColumn("psf_r",df1["r"]*df1["snr_i_cModel"])
-p=df_histplot(df1,"psf_r",Nbins=100,bounds=(0,1))
+p=df_histplot(df1,"psf_r",Nbins=1001,bounds=(0,5))
 
+
+#pull
+p=df_histplot(df1.withColumn("pullx",df1["dx"]/df1["sigpos"]),"pullx",bounds=(-10,10),Nbins=1001)
+addStat(p['loc'].values,p['count'])
