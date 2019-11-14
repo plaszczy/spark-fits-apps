@@ -3,7 +3,7 @@ from pylab import *
 from tools import *
 from scipy.interpolate import interp1d
 
-def histstat(x,y,label="",newFig=True,doStat=True,log=True):
+def hist_stat(x,y,label="",newFig=True,doStat=True,log=True):
     if newFig:
         figure()
     bar_outline(x,y,label=label)
@@ -48,7 +48,7 @@ def histstat(x,y,label="",newFig=True,doStat=True,log=True):
 
 
 
-def histfile(fn="df.txt",**kwargs):
+def hist_file(fn="df.txt",**kwargs):
 
     b,x,y=loadtxt(fn,unpack=True)
     return  hist_stat(x,y,**kwargs)

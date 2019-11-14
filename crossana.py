@@ -26,28 +26,36 @@ df1.cache().count()
 x,y,m=df_histplot2(df1,"dx","dy",Nbin1=100,Nbin2=100,bounds=((-2.5,2.5),(-2.5,2.5))) 
 clf()
 imshowXY(x,y,log10(1+m))
-#zoom
+#zoom avec cut r<1
 x,y,m=df_histplot2(df1.filter(df1.r<1),"dx","dy",Nbin1=100,Nbin2=100,bounds=((-1,1),(-1,1))
 clf()
 imshowXY(x,y,log10(1+m))
 
 
-#clean with flux
+#r-flux
 x,y,m=df_histplot2(df1,"dflux","r",Nbin1=100,Nbin2=100,bounds=((-500,500),(0,1.5)))
 
 imshowXY(x,y,log10(m+1))    
 
-#clean with flux
+#w/o flux cuts
 df1=df1.filter(df1.r<1)
 p1=df_histplot(df1,"dx",Nbins=1001,bounds=(-1,1))
 p2=df_histplot(df1.filter((df1["dflux"]<500)&(df1["dflux"]>-500)),"dx",Nbins=1001,bounds=(-1,1))
 p3=df_histplot(df1.filter((df1["dflux"]<200)&(df1["dflux"]>-250)),"dx",Nbins=1001,bounds=(-1,1))
 
 
-histstat(p1['loc'].values,1001*p1['count'].values/sum(p1['count'].values),log=False) 
-histstat(p2['loc'].values,1001*p2['count'].values/sum(p2['count'].values),log=False,newFig=False,doStat=False)
-histstat(p3['loc'].values,1001*p3['count'].values/sum(p3['count'].values),log=False,newFig=False,doStat=False)
+hist_stat(p1['loc'].values,1001*p1['count'].values/sum(p1['count'].values),log=False) 
+hist_stat(p2['loc'].values,1001*p2['count'].values/sum(p2['count'].values),log=False,newFig=False,doStat=False)
+hist_stat(p3['loc'].values,1001*p3['count'].values/sum(p3['count'].values),log=False,newFig=False,doStat=False)
 ylim(0,0.2)
 xlabel("dx [arcsec]")
 
-#flux
+#flux distribs
+
+#psf
+x,y,m=df_histplot2(df1,"psf_x","psf_y",Nbin1=100,Nbin2=100,bounds=((-1,1),(-1,1))
+
+
+df1=df1.withColumn("psf_r",df1["r"]*df1["snr_i_cModel"])
+p=df_histplot(df1,"psf_r",Nbins=100,bounds=(0,1))
+
