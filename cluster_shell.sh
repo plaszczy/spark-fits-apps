@@ -30,10 +30,10 @@ echo "runinng on  ${n_executors} executors"
 source sparkopts.sh ${n_executors}
 
 #add sparkfits
-SF="/spark_mongo_tmp/stephane.plaszczynski/spark-fits-apps/lib/spark-fits_2.11-0.6.0.jar"
+MYJARS="$HOME/spark-fits-apps/lib/spark-fits_2.11-0.6.0.jar,$HOME/spark-fits-apps/lib/jhealpix.jar"
 
 # Run it!
-cmd="$1 $SPARKOPTS --jars $SF"
+cmd="$1 $SPARKOPTS --packages $LAL_SPARK_PACKAGE --jars $LAL_SPARK_JARS,$MYJARS"
 
 export PYSPARK_DRIVER_PYTHON=ipython
 
@@ -42,6 +42,8 @@ if [ $nargs -eq 3 ]; then
 export PYSPARK_DRIVER_PYTHON=
 cmd="PYSPARK_DRIVER_PYTHON_OPTS='/opt/anaconda/bin/jupyter-notebook --no-browser --port=24501' $cmd"
 fi
-
+echo "running >>>>>>>>>>>>>>>>"
 echo $cmd
+echo "<<<<<<<<<<<<<<<<<<<<<<<<"
+
 eval $cmd

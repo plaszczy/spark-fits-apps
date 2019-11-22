@@ -50,8 +50,6 @@ hist_stat(p3['loc'].values,1001*p3['count'].values/sum(p3['count'].values),log=F
 ylim(0,0.2)
 xlabel("dx [arcsec]")
 
-#flux distribs
-
 #psf
 df1=df1.filter(df1.r<0.6)
 
@@ -84,5 +82,7 @@ p=df_histplot(df1,"psf_r",Nbins=1001,bounds=(0,5))
 
 
 #pull
+df1=df1.withColumn("pull_r",df1["psf_r"]/df1["psf_fwhm_i"])
+
 p=df_histplot(df1.withColumn("pullx",df1["dx"]/df1["sigpos"]),"pullx",bounds=(-10,10),Nbins=1001)
 addStat(p['loc'].values,p['count'])
