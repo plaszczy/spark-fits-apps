@@ -2,12 +2,10 @@ from df_tools import *
 from tools import *
 from histfile import *
 
-#df1=spark.read.parquet("/lsst/DC2/df1.parquet")
 df1=spark.read.parquet("/lsst/DC2/df2.parquet")
 
+#cuts
 df1=df1.filter(df1["snr_i_cModel"]>1) 
-
-#df1=df1.filter(df1["mag_i_cModel"]<24.1)
 df1=df1.filter( (df1["clean"]==1) & (df1["extendedness"]==1)) 
 
 
@@ -19,6 +17,9 @@ df1=df1.withColumn("dx",F.degrees(F.sin((df1["theta_s"]+df1["theta_t"])/2)*(df1[
 df1=df1.withColumn("dy",F.degrees(df1["theta_s"]-df1["theta_t"])*3600)
 df1=df1.withColumn("psf_x",df1["dx"]*df1["snr_i_cModel"])
 df1=df1.withColumn("psf_y",df1["dy"]*df1["snr_i_cModel"])
+
+
+#df1=df1.filter(df1.r<0.6)
 
 df1.cache().count()
 
@@ -86,3 +87,20 @@ df1=df1.withColumn("pull_r",df1["psf_r"]/df1["psf_fwhm_i"])
 
 p=df_histplot(df1.withColumn("pullx",df1["dx"]/df1["sigpos"]),"pullx",bounds=(-10,10),Nbins=1001)
 addStat(p['loc'].values,p['count'])
+
+
+#mag vs snr
+snrcut=arange(10,31,2,dtype=float64)
+
+figure()
+for (v1,v2) in zip(snrcut[:-1],roll(snrcut,-1)):
+    print(v1,v2)
+#    p=df_hist(df1.filter(df1["snr_i_cModel"].between(v1,v2)),"dmag",bounds=(-1.5,1),Nbins=300)
+    p=df_hist(df1.filter(df1["snr_i_cModel"].between(v1,v2)),"dflux",bounds=(-1000,1000),Nbins=300)
+    x=p[0]['loc'].values
+    y=p[0]['count'].values
+    bar_outline(x,y/sum(y),label=r"{}<SNR<{}".format(int(v1),int(v2)))
+legend()
+axvline(0,c='k',ls='--')
+#xlabel("mag(rec)-mag(true)")
+xlabel("flux(rec)-flux(true)")
