@@ -15,8 +15,8 @@ df1=df1.withColumn("dmag",df1["mag_i_cModel"]-df1["mag_i"])
 df1=df1.withColumn("sigpos",df1["sigr"]/df1["snr_i_cModel"]).drop("sigr")
 df1=df1.withColumn("dx",F.degrees(F.sin((df1["theta_s"]+df1["theta_t"])/2)*(df1["phi_s"]-df1["phi_t"]))*3600)
 df1=df1.withColumn("dy",F.degrees(df1["theta_s"]-df1["theta_t"])*3600)
-df1=df1.withColumn("psf_x",df1["dx"]*df1["snr_i_cModel"])
-df1=df1.withColumn("psf_y",df1["dy"]*df1["snr_i_cModel"])
+df1=df1.withColumn("psf_x",df1["dx"]*df1["snr_i_cModel"]/sqrt(2.))
+df1=df1.withColumn("psf_y",df1["dy"]*df1["snr_i_cModel"]/sqrt(2.))
 
 
 #df1=df1.filter(df1.r<0.6)
@@ -34,7 +34,7 @@ imshowXY(x,y,log10(1+m))
 
 
 #r-flux
-x,y,m=df_histplot2(df1,"dflux","r",Nbin1=100,Nbin2=100,bounds=((-500,500),(0,1.5)))
+x,y,m=df_histplot2(df1,"dflux","r",Nbin1=100,Nbin2=100,bounds=((-500,500),(0,1.)))
 
 imshowXY(x,y,log10(m+1))    
 
@@ -66,7 +66,7 @@ ylim(0)
 axhline(0.5,ls='--',c='k')
 
 r=linspace(0,2.8,100)
-fwhm=0.67*2
+fwhm=0.47*2
 
 sig=fwhm/2.355
 plot(r,exp(-r**2/(2*sig**2)),label="Gaussian")
@@ -78,29 +78,42 @@ for b in [4.765,2] :
 
 
 #histo dr?
-df1=df1.withColumn("psf_r",df1["r"]*df1["snr_i_cModel"])
-p=df_histplot(df1,"psf_r",Nbins=1001,bounds=(0,5))
+df1=df1.withColumn("psf_r",df1["r"]*df1["snr_i_cModel"]/sqrt(2.))
+p=df_histplot(df1,"psf_r",Nbins=101,bounds=(0,5))
 
 
 #pull
 df1=df1.withColumn("pull_r",df1["psf_r"]/df1["psf_fwhm_i"])
+p=df_histplot(df1,"pull_r",Nbins=101,bounds=(0,5))
 
 p=df_histplot(df1.withColumn("pullx",df1["dx"]/df1["sigpos"]),"pullx",bounds=(-10,10),Nbins=1001)
 addStat(p['loc'].values,p['count'])
 
 
 #mag vs snr
-snrcut=arange(10,31,2,dtype=float64)
+
+df1=df1.withColumn("pull_flux",df1['dflux']/df1['cModelFluxErr_i'])
+df1=df1.withColumn("pull_mag",df1['dmag']/df1['magerr_i_cModel'])
+
+snrcut=arange(10,31,4,dtype=float64)
 
 figure()
 for (v1,v2) in zip(snrcut[:-1],roll(snrcut,-1)):
     print(v1,v2)
 #    p=df_hist(df1.filter(df1["snr_i_cModel"].between(v1,v2)),"dmag",bounds=(-1.5,1),Nbins=300)
-    p=df_hist(df1.filter(df1["snr_i_cModel"].between(v1,v2)),"dflux",bounds=(-1000,1000),Nbins=300)
+#    p=df_hist(df1.filter(df1["snr_i_cModel"].between(v1,v2)),"dflux",bounds=(-1000,1000),Nbins=300)
+    p=df_hist(df1.filter(df1["snr_i_cModel"].between(v1,v2)),"pull_flux",bounds=(-10,10),Nbins=300)
     x=p[0]['loc'].values
     y=p[0]['count'].values
     bar_outline(x,y/sum(y),label=r"{}<SNR<{}".format(int(v1),int(v2)))
-legend()
 axvline(0,c='k',ls='--')
-#xlabel("mag(rec)-mag(true)")
-xlabel("flux(rec)-flux(true)")
+y=exp(-x**2/2)
+#plot(x,y/sum(y),'k--')
+plot(x,y*.011,'k--')
+
+legend()
+
+xlabel("(mag(rec)-mag(true))/sigmag")
+xlabel("(flux(rec)-flux(true))/sigma(flux)")
+#astro vs photo
+
