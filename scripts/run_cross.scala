@@ -47,3 +47,5 @@ obj=obj.filter($"mag_i_cModel"<magcut)
 
 ///:load scripts/cross-tools.scala
 val df1=single_match(obj,gal)
+
+//df1.write.parquet("df3.parquet")

@@ -90,7 +90,7 @@ def single_match(df_src:DataFrame,df_target:DataFrame,ra_src:String="ra",dec_src
 
   println("*** caching source+duplicates: "+dup.columns.mkString(", "))
 
-  val Ndup=source.cache().count
+  val Ndup=dup.cache().count
 
   println(f"source+duplicates size=${Ndup/1e6}%3.2f M")
 
@@ -115,19 +115,21 @@ def single_match(df_src:DataFrame,df_target:DataFrame,ra_src:String="ra",dec_src
 //join by ipix: tous les candidats paires
   var matched=dup.join(target,"ipix").drop("ipix")
 
-  println("==> joining on ipix: "+matched.columns.mkString(", "))
-  val nmatch=matched.cache.count()
-  println(f"#pair-associations=${nmatch/1e6}%3.2f M")
-
   //release mem
   dup.unpersist
   target.unpersist
 
+  //add distance column
+  matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).drop("dx","dy","dz")
+
+
+  println("==> joining on ipix: "+matched.columns.mkString(", "))
+  val nmatch=matched.cache.count()
+  println(f"#pair-associations=${nmatch/1e6}%3.2f M")
+
   timer.step
   timer.print("join")
 
-  //add distance column
-  matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).drop("dx","dy","dz")
 
   // pair RDD
   //create a map to retrieve position
@@ -165,8 +167,8 @@ def single_match(df_src:DataFrame,df_target:DataFrame,ra_src:String="ra",dec_src
   timer.step
   timer.print("completed")
 
-  val tot_time=(timer.time-start_time)*1e9
-  println(f"TOT TIME=${tot_time}")
+  val tot_time=(timer.time-start_time)*1e-9
+  println(f"TOT TIME=${tot_time/60}%.1f mins")
 
   df1
 }
