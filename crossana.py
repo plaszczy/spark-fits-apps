@@ -2,7 +2,7 @@ from df_tools import *
 from tools import *
 from histfile import *
 
-df1=spark.read.parquet("/lsst/DC2/df2.parquet")
+df1=spark.read.parquet("/lsst/DC2/df3.parquet")
 
 #cuts
 df1=df1.filter(df1["snr_i_cModel"]>1) 
@@ -11,13 +11,19 @@ df1=df1.filter( (df1["clean"]==1) & (df1["extendedness"]==1))
 
 df1=df1.withColumn("flux_i",F.pow(10.0,-(df1["mag_i"]-31.4)/2.5))
 df1=df1.withColumn("dflux",df1["cModelFlux_i"]-df1["flux_i"])
-df1=df1.withColumn("dmag",df1["mag_i_cModel"]-df1["mag_i"])
-df1=df1.withColumn("sigpos",df1["sigr"]/df1["snr_i_cModel"]).drop("sigr")
+df1=df1.withColumn("dmag_i",df1["mag_i_cModel"]-df1["mag_i"])
+df1=df1.withColumn("dmag_r",df1["mag_r_cModel"]-df1["mag_r"])
+
+#df1=df1.withColumn("sigpos",df1["sigr"]/df1["snr_i_cModel"]).drop("sigr")
 df1=df1.withColumn("dx",F.degrees(F.sin((df1["theta_s"]+df1["theta_t"])/2)*(df1["phi_s"]-df1["phi_t"]))*3600)
 df1=df1.withColumn("dy",F.degrees(df1["theta_s"]-df1["theta_t"])*3600)
 df1=df1.withColumn("psf_x",df1["dx"]*df1["snr_i_cModel"]/sqrt(2.))
 df1=df1.withColumn("psf_y",df1["dy"]*df1["snr_i_cModel"]/sqrt(2.))
 
+df1=df1.withColumn("ri_true",df1['mag_r']-df1['mag_i'])
+df1=df1.withColumn("ri_rec",df1['mag_r_cModel']-df1['mag_r_cModel'])
+
+df1=df1.withColumn("dri",df1['ri_rec']-df1['ri_true'])
 
 #df1=df1.filter(df1.r<0.6)
 
@@ -92,8 +98,8 @@ addStat(p['loc'].values,p['count'])
 
 #mag vs snr
 
-df1=df1.withColumn("pull_flux",df1['dflux']/df1['cModelFluxErr_i'])
-df1=df1.withColumn("pull_mag",df1['dmag']/df1['magerr_i_cModel'])
+df1=df1.withColumn("pull_flux_i",df1['dflux']/df1['cModelFluxErr_i'])
+df1=df1.withColumn("pull_mag_i",df1['dmag_i']/df1['magerr_i_cModel'])
 
 snrcut=arange(10,31,4,dtype=float64)
 
@@ -116,4 +122,5 @@ legend()
 xlabel("(mag(rec)-mag(true))/sigmag")
 xlabel("(flux(rec)-flux(true))/sigma(flux)")
 #astro vs photo
-
+x,y,m=df_histplot2(df1.filter(df1.snr_i_cModel>10),"dmag_i","r",bounds=((-0.2,0.2),(0,0.1)),Nbin1=200,Nbin2=200)
+title(r"SNR>10")
