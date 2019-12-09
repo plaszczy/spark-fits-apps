@@ -37,11 +37,11 @@ stars=stars.select(cols.head,cols.tail: _*).na.drop
 
 //OBJECT CAT
 var obj=spark.read.parquet(System.getenv("RUN2"))
-val cols=Array("objectId","ra","dec","psf_fwhm_i","mag_i_cModel","magerr_i_cModel","cModelFlux_i","cModelFluxErr_i","mag_r_cModel","magerr_r_cModel","clean","snr_i_cModel","blendedness","extendedness")
+val cols=Array("objectId","ra","dec","psf_fwhm_i","mag_i_cModel","magerr_i_cModel","cModelFlux_i","cModelFluxErr_i","mag_r_cModel","magerr_r_cModel","clean","snr_i_cModel","snr_r_cModel","blendedness","extendedness")
 
 obj=obj.select(cols.head,cols.tail: _*).na.drop
 //filter
-obj=obj.filter($"mag_i_cModel"<magcut)
+obj=obj.filter($"mag_i_cModel"<magcut).filter($"snr_i_cModel">1)
 
 
 

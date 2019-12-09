@@ -1,87 +1,42 @@
 
-import org.apache.spark.sql.{functions=>F}
-import org.apache.spark.sql.Row
+//:load scripts/cross-tools.scala
 
-import healpix.essentials.HealpixBase
-import healpix.essentials.Pointing
-import healpix.essentials.Scheme.NESTED
-
-import org.apache.spark.sql.functions.udf
-import org.apache.spark.sql.types._
-
-// Logger info
-import org.apache.log4j.Level
-import org.apache.log4j.Logger
-
-
-// Set to Level.WARN is you want verbosity
-Logger.getLogger("org").setLevel(Level.OFF)
-Logger.getLogger("akka").setLevel(Level.OFF)
-
-//Timer
-class Timer (var t0:Double=System.nanoTime().toDouble,   var dt:Double=0)  {
-
-  def time:Double=System.nanoTime().toDouble
-
-  def step:Double={
-    val t1 = System.nanoTime().toDouble
-    dt=(t1-t0)/1e9
-    t0=t1
-    dt
-  }
-  def print(msg:String):Unit={
-    val sep="----------------------------------------"
-    println("\n"+msg+": "+dt+" s\n"+sep)
-  }
-}
-
-//Healpix
-class ExtPointing extends Pointing with java.io.Serializable
-val nside=262144
-#val nside=131072
-//val nside=65536
-
-val hp = new HealpixBase(nside, NESTED)
-
-case class HealpixGrid(hp : HealpixBase, ptg : ExtPointing) {
-  def index(theta : Double, phi : Double) : Long = {
-    ptg.theta = theta
-    ptg.phi = phi
-    hp.ang2pix(ptg)
-  }
-  def neighbours(ipix:Long):Array[Long] =  {
-    hp.neighbours(ipix)
-  }
-
-}
-
-val grid = HealpixGrid(hp, new ExtPointing)
-val Ang2pix=spark.udf.register("Ang2pix",(theta:Double,phi:Double)=>grid.index(theta,phi))
-
-val pix_neighbours=spark.udf.register("pix_neighbours",(ipix:Long)=>grid.neighbours(ipix))
-
-/************************/
 val timer=new Timer
 val start=timer.time
 
-//SOURCE=run2
 
+//min radius arcsec
+val rcut=1.0
+
+//common cuts
 val magcut=25.3
-val snrcut=1.0
 
-val df_src=spark.read.parquet(System.getenv("RUN2"))
 
+//SOURCE
+var source=spark.read.parquet(System.getenv("RUN2"))
+val col_s=Array("objectId","ra","dec","mag_i_cModel","psf_fwhm_i","magerr_i_cModel","cModelFlux_i","cModelFluxErr_i","clean","snr_i_cModel","blendedness","extendedness")
+val sourceId=col_s(0)
+source=source.select(col_s.head,col_s.tail: _*).na.drop
+//cut
+source=source.filter($"mag_i_cModel"<magcut)
+source.printSchema
+
+//TARGET
+var target=spark.read.parquet(System.getenv("COSMODC2"))
 // select columns
-var df=df_src.select("objectId","ra","dec","mag_i_cModel","psf_fwhm_i","magerr_i_cModel","cModelFlux_i","cModelFluxErr_i","clean","snr_i_cModel","blendedness","extendedness").na.drop
+val col_t=Array("galaxy_id","ra","dec","mag_i")
+target=target.select(col_t.head,col_t.tail: _*).na.drop
+//cut
+target=target.filter($"mag_i"<magcut)
+target.printSchema
 
-//filter
-df=df.filter($"mag_i_cModel"<magcut).filter($"snr_i_cModel">snrcut)
+/*--------------------------------------------------------*/
 
 //add theta-phi and healpixels
-df=df.withColumn("theta_s",F.radians(F.lit(90)-F.col("dec"))).withColumn("phi_s",F.radians("ra"))
-val source=df.withColumn("ipix",Ang2pix($"theta_s",$"phi_s")).drop("ra","dec")
+source=source.withColumn("theta_s",F.radians(F.lit(90)-F.col("dec"))).withColumn("phi_s",F.radians("ra"))
+source=source.withColumn("ipix",Ang2pix($"theta_s",$"phi_s")).drop("ra","dec")
 
-println("*** caching source: "+df.columns.mkString(", "))
+println("*** caching source: "+source.columns.mkString(", "))
 val Ns=source.cache.count
 println(f"input size=${Ns/1e6}%3.2f M")
 
@@ -104,9 +59,7 @@ dups(8)=source
 val dup=dups.reduceLeft(_.union(_))
 
 println("*** caching source+duplicates: "+dup.columns.mkString(", "))
-
-val Ndup=source.cache().count
-
+val Ndup=dup.cache().count
 println(f"source+duplicates size=${Ndup/1e6}%3.2f M")
 
 timer.step
@@ -115,18 +68,9 @@ timer.print("duplicates cache")
 /************************/
 //TARGET=cosmodc2
 
-val df_t=spark.read.parquet(System.getenv("COSMODC2"))
-// select columns
-df=df_t.select("galaxy_id","ra","dec","mag_i").na.drop
-
-//filter
-df=df.filter($"mag_i"<magcut)
-
 //add healpixels
-df=df.withColumn("theta_t",F.radians(F.lit(90)-F.col("dec"))).withColumn("phi_t",F.radians("ra"))
-df=df.withColumn("ipix",Ang2pix($"theta_t",$"phi_t")).drop("ra","dec")
-
-val target=df
+target=target.withColumn("theta_t",F.radians(F.lit(90)-F.col("dec"))).withColumn("phi_t",F.radians("ra"))
+target=target.withColumn("ipix",Ang2pix($"theta_t",$"phi_t")).drop("ra","dec")
 
 println("*** caching target: "+target.columns.mkString(", "))
 val Nt=target.cache().count
@@ -140,6 +84,12 @@ timer.print("target cache")
 //join by ipix: tous les candidats paires
 var matched=dup.join(target,"ipix").drop("ipix")
 
+//add distance column
+matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).drop("dx","dy","dz").withColumn("r",F.degrees($"d")*3600).drop("d")
+
+//no need to associate above rcut
+matched=matched.filter($"r"<rcut)
+
 println("==> joining on ipix: "+matched.columns.mkString(", "))
 val nmatch=matched.cache.count()
 println(f"#pair-associations=${nmatch/1e6}%3.2f M")
@@ -152,66 +102,56 @@ timer.step
 timer.print("join")
 
 
-
-
-//add euclidian distance
-//matched=matched.withColumn("d",F.hypot(matched("phi_t")-matched("phi_s"),F.sin((matched("theta_t")+matched("theta_s"))/2)*(matched("theta_t")-matched("theta_s"))))
-
-//add distance column
-matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).drop("dx","dy","dz")
-
 // pair RDD
 //create a map to retrieve position
 val idx=matched.columns.map(s=>(s,matched.columns.indexOf(s))).toMap
 
-//build paiRDD based on key objectId
-
 /*
-val rdd=matched.rdd.map(r=>(r.getLong(idx("objectId")),r))
-val ir:Int=idx("d")
+//build paiRDD based on key objectId
+val rdd=matched.rdd.map(r=>(r.getLong(idx(sourceId)),r))
+val ir:Int=idx("r")
 val ass_rdd=rdd.reduceByKey((r1,r2)=> if (r1.getDouble(ir)<r2.getDouble(ir)) r1 else r2)
-val ass=spark.createDataFrame(ass_rdd.map(x=>x._2),matched.schema)
- */
+var ass=spark.createDataFrame(ass_rdd.map(x=>x._2),matched.schema)
 
-//reduce by min(r) and accumlate counts
-val ir:Int=idx("d")
-val rdd=matched.rdd.map{ r=>(r.getLong(idx("objectId")),(r,1L)) } 
-val ass_rdd=rdd.reduceByKey { case ( (r1,c1),(r2,c2)) => (if (r1.getDouble(ir)<r2.getDouble(ir)) r1 else r2 ,c1+c2) }
-val ass=spark.createDataFrame(ass_rdd.map{ case (k,(r,c))=> Row.fromSeq(r.toSeq++Seq(c)) },matched.schema.add(StructField("nass",LongType,true)))
-
+//filter 
 println("*** reducebykey id_source")
 val nc=ass.cache.count
 
-timer.step
-timer.print("reducebykey")
-
+//count #cands
+val cands=matched.groupBy(sourceId).count
+print(cands.cache.count)
 
 matched.unpersist
+val df_ass=ass.join(cands,sourceId)
+print(df_ass.cache.count)
+ */
+
+//reduce by min(r) and accumlate counts
+val ir:Int=idx("r")
+val rdd=matched.rdd.map{ r=>(r.getLong(idx(sourceId)),(r,1L)) } 
+val ass_rdd=rdd.reduceByKey { case ( (r1,c1),(r2,c2)) => (if (r1.getDouble(ir)<r2.getDouble(ir)) r1 else r2 ,c1+c2) }
+val df_ass=spark.createDataFrame(ass_rdd.map{ case (k,(r,c))=> Row.fromSeq(r.toSeq++Seq(c)) },matched.schema.add(StructField("nass",LongType,true)))
+
+val nc=df_ass.cache.count
 
 //stat on # associations: unnecessary
-ass.groupBy("nass").count.withColumn("frac",$"count"/nc).sort("nass").show
+//ass.groupBy("nass").count.withColumn("frac",$"count"/nc).sort("nass").show
 
 
 // ncand=1
-var df1=ass.filter($"nass"===F.lit(1)).withColumn("r",F.degrees($"d")*3600).withColumn("sigr",$"psf_fwhm_i"/2.355).drop("nass","d")
+var df1=df_ass.filter($"nass"===F.lit(1)).drop("nass")
 
 println("*** caching df1: "+df1.columns.mkString(", "))
-val nout1=df1.cache.count
+val n1=df1.cache.count
 df1.printSchema
 
-println(f"||i<${magcut}|| ${Ns/1e6}%3.2f || ${nc/1e6}%3.2f (${nc.toFloat/Ns*100}%.1f%%) || ${nout1/1e6}%3.2f (${nout1.toFloat/nc*100}%.1f%%)||")
+println(f"||i<${magcut}|| ${Ns/1e6}%3.2f || ${nc/1e6}%3.2f (${nc.toFloat/Ns*100}%.1f%%) || ${n1/1e6}%3.2f (${n1.toFloat/nc*100}%.1f%%)||")
 
 timer.step
 timer.print("completed")
 
-val stop=timer.time
-println(f"TOT TIME=${stop-start}*1e-9")
-
-//extra cuts
-/*
-df1=df1.withColumn("flux_i",F.pow(10.0,-($"mag_i"-31.4)/2.5))
-df1=df1.filter(F.abs(($"cModelFlux_i"-$"flux_i")/$"cModelFluxErr_i")<3)
- */
+val fulltime=(timer.time-start)*1e-9/60
+println(f"TOT TIME=${fulltime}")
 
 
 /*
