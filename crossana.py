@@ -20,10 +20,9 @@ df1=df1.withColumn("dy",F.degrees(df1["theta_s"]-df1["theta_t"])*3600)
 df1=df1.withColumn("psf_x",df1["dx"]*df1["snr_i_cModel"]/sqrt(2.))
 df1=df1.withColumn("psf_y",df1["dy"]*df1["snr_i_cModel"]/sqrt(2.))
 
-df1=df1.withColumn("ri_true",df1['mag_r']-df1['mag_i'])
-df1=df1.withColumn("ri_rec",df1['mag_r_cModel']-df1['mag_r_cModel'])
-
-df1=df1.withColumn("dri",df1['ri_rec']-df1['ri_true'])
+df1=df1.withColumn("r-i_true",df1['mag_r']-df1['mag_i'])
+df1=df1.withColumn("r-i_rec",df1['mag_r_cModel']-df1['mag_i_cModel'])
+df1=df1.withColumn("d(r-i)",df1['r-i_rec']-df1['r-i_true'])
 
 #df1=df1.filter(df1.r<0.6)
 
