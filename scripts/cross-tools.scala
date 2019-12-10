@@ -29,8 +29,8 @@ class Timer (var t0:Double=System.nanoTime().toDouble,   var dt:Double=0)  {
 //Healpix
 class ExtPointing extends Pointing with java.io.Serializable
 //val nside=262144
-//val nside=131072
-val nside=65536
+val nside=131072
+//val nside=65536
 
 
 print(s"Using NSIDE=$nside")
@@ -57,7 +57,7 @@ val pix_neighbours=spark.udf.register("pix_neighbours",(ipix:Long)=>grid.neighbo
 
 /************************/
 
-def single_match(df_src:DataFrame,df_target:DataFrame,ra_src:String="ra",dec_src:String="dec",ra_t:String="ra",dec_t:String="dec"):DataFrame = {
+def single_match(df_src:DataFrame,df_target:DataFrame,rcut:Double=1.0,ra_src:String="ra",dec_src:String="dec",ra_t:String="ra",dec_t:String="dec"):DataFrame = {
 
   val timer=new Timer
   val start_time=timer.time
@@ -120,7 +120,10 @@ def single_match(df_src:DataFrame,df_target:DataFrame,ra_src:String="ra",dec_src
   target.unpersist
 
   //add distance column
-  matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).drop("dx","dy","dz")
+  matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).drop("dx","dy","dz").withColumn("r",F.degrees($"d")*3600).drop("d")
+
+  //no need to associate above rcut
+  matched=matched.filter($"r"<rcut)
 
 
   println("==> joining on ipix: "+matched.columns.mkString(", "))
@@ -137,7 +140,7 @@ def single_match(df_src:DataFrame,df_target:DataFrame,ra_src:String="ra",dec_src
 
 
   //reduce by min(r) and accumlate counts
-  val ir:Int=idx("d")
+  val ir:Int=idx("r")
   val rdd=matched.rdd.map{ r=>(r.getLong(idx("objectId")),(r,1L)) }
   val ass_rdd=rdd.reduceByKey { case ( (r1,c1),(r2,c2)) => (if (r1.getDouble(ir)<r2.getDouble(ir)) r1 else r2 ,c1+c2) }
   val ass=spark.createDataFrame(ass_rdd.map{ case (k,(r,c))=> Row.fromSeq(r.toSeq++Seq(c)) },matched.schema.add(StructField("nass",LongType,true)))
@@ -154,21 +157,20 @@ def single_match(df_src:DataFrame,df_target:DataFrame,ra_src:String="ra",dec_src
 //stat on # associations: unnecessary
 //ass.groupBy("nass").count.withColumn("frac",$"count"/nc).sort("nass").show
 
-
   // ncand=1
-  var df1=ass.filter($"nass"===F.lit(1)).withColumn("r",F.degrees($"d")*3600).drop("nass","d")
+  var df1=ass.filter($"nass"===F.lit(1)).drop("nass")
 
   println("*** caching df1: "+df1.columns.mkString(", "))
-  val nout1=df1.cache.count
+  val n1=df1.cache.count
   df1.printSchema
 
-  println(f"|| ${Ns/1e6}%3.2f || ${nc/1e6}%3.2f (${nc.toFloat/Ns*100}%.1f%%) || ${nout1/1e6}%3.2f (${nout1.toFloat/nc*100}%.1f%%)||")
+  println(f"|| ${Ns/1e6}%3.2f || ${nc/1e6}%3.2f (${nc.toFloat/Ns*100}%.1f%%) || ${n1/1e6}%3.2f (${n1.toFloat/nc*100}%.1f%%)||")
 
   timer.step
   timer.print("completed")
 
-  val tot_time=(timer.time-start_time)*1e-9
-  println(f"TOT TIME=${tot_time/60}%.1f mins")
+  val tot_time=(timer.time-start_time)*1e-9/60
+  println(f"TOT TIME=${tot_time}%.1f mins")
 
   df1
 }

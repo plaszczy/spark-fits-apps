@@ -41,7 +41,7 @@ val cols=Array("objectId","ra","dec","psf_fwhm_i","mag_i_cModel","magerr_i_cMode
 
 obj=obj.select(cols.head,cols.tail: _*).na.drop
 //filter
-obj=obj.filter($"mag_i_cModel"<magcut).filter($"snr_i_cModel">1)
+obj=obj.filter($"mag_i_cModel"<magcut)
 
 
 
