@@ -58,6 +58,13 @@ val pix_neighbours=spark.udf.register("pix_neighbours",(ipix:Long)=>grid.neighbo
 /************************/
 
 def single_match(df_src:DataFrame,df_target:DataFrame,rcut:Double=1.0,ra_src:String="ra",dec_src:String="dec",ra_t:String="ra",dec_t:String="dec"):DataFrame = {
+/*  cross match2 catalogs havinf ra/dec's coordinates with r<rcut. Uses Healpix (check nside if rcut change)
+    - do not put in cache
+    - df_src witll be duplicated
+    - df_src first colummn should be a unique id
+
+ */
+  val sourceId=df_src.columns(0)
 
   val timer=new Timer
   val start_time=timer.time
@@ -141,7 +148,7 @@ def single_match(df_src:DataFrame,df_target:DataFrame,rcut:Double=1.0,ra_src:Str
 
   //reduce by min(r) and accumlate counts
   val ir:Int=idx("r")
-  val rdd=matched.rdd.map{ r=>(r.getLong(idx("objectId")),(r,1L)) }
+  val rdd=matched.rdd.map{ r=>(r.getLong(idx(sourceId)),(r,1L)) }
   val ass_rdd=rdd.reduceByKey { case ( (r1,c1),(r2,c2)) => (if (r1.getDouble(ir)<r2.getDouble(ir)) r1 else r2 ,c1+c2) }
   val ass=spark.createDataFrame(ass_rdd.map{ case (k,(r,c))=> Row.fromSeq(r.toSeq++Seq(c)) },matched.schema.add(StructField("nass",LongType,true)))
 

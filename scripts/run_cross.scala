@@ -17,7 +17,7 @@ Logger.getLogger("akka").setLevel(Level.OFF)
 
 
 //COMMON CUTS
-val magcut=25.3
+val magcut=22.3
 
 //GALCAT cosmodc2
 var gal=spark.read.parquet(System.getenv("COSMODC2"))
@@ -27,13 +27,12 @@ gal=gal.select(cols.head,cols.tail: _*).na.drop
 //filter
 gal=gal.filter($"mag_i"<magcut)
 
-/*
+
 //STARS
-var stars=spark.read.format("fits").option("hdu",1).load("all_stars_DC2_run2.1i.fits")
-val cols=Array("simobjid","ra","decl","rmag","imag")
+var stars=spark.read.parquet("refcat_v3_dc2_r2p1i.parquet")
+val cols=Array("id","ra","dec","ra_smeared","dec_smeared","i","i_smeared","r","r_smeared")
 stars=stars.select(cols.head,cols.tail: _*).na.drop
-//cut?
-*/
+stars=stars.filter($"i_smeared"<magcut)
 
 //OBJECT CAT
 var obj=spark.read.parquet(System.getenv("RUN2"))
