@@ -2,12 +2,19 @@ from df_tools import *
 from tools import *
 from histfile import *
 
-df1=spark.read.parquet("/lsst/DC2/df3.parquet")
+df1=spark.read.parquet("/lsst/DC2/df4.parquet")
+
+
+df1=spark.read.parquet("/lsst/DC2/stars.parquet")
+df1=df1.withColumnRenamed("i_smeared","mag_i")
+df1=df1.withColumnRenamed("r_smeared","mag_r")
+
 
 #cuts
-df1=df1.filter(df1["snr_i_cModel"]>1) 
-df1=df1.filter( (df1["clean"]==1) & (df1["extendedness"]==1)) 
+df1=df1.filter((df1["snr_i_cModel"]>1) & (df1["snr_r_cModel"]>1))
 
+df1=df1.filter( (df1["clean"]==1)) 
+#df1=df.filter(df1["extendedness"]==1)) 
 
 df1=df1.withColumn("flux_i",F.pow(10.0,-(df1["mag_i"]-31.4)/2.5))
 df1=df1.withColumn("dflux",df1["cModelFlux_i"]-df1["flux_i"])
@@ -33,7 +40,7 @@ x,y,m=df_histplot2(df1,"dx","dy",Nbin1=100,Nbin2=100,bounds=((-2.5,2.5),(-2.5,2.
 clf()
 imshowXY(x,y,log10(1+m))
 #zoom avec cut r<1
-x,y,m=df_histplot2(df1.filter(df1.r<1),"dx","dy",Nbin1=100,Nbin2=100,bounds=((-1,1),(-1,1))
+x,y,m=df_histplot2(df1,"dx","dy",Nbin1=100,Nbin2=100,bounds=((-1,1),(-1,1)))
 clf()
 imshowXY(x,y,log10(1+m))
 
@@ -123,3 +130,13 @@ xlabel("(flux(rec)-flux(true))/sigma(flux)")
 #astro vs photo
 x,y,m=df_histplot2(df1.filter(df1.snr_i_cModel>10),"dmag_i","r",bounds=((-0.2,0.2),(0,0.1)),Nbin1=200,Nbin2=200)
 title(r"SNR>10")
+x,y,m=df_histplot2(df1,"dmag_i","snr_i_cModel",bounds=((-0.2,0.2),(0,100)),Nbin1=200,Nbin2=200)
+
+
+
+
+#colors
+
+x,y,m=df_histplot2(df1,"d(r-i)","r",bounds=((-0.2,0.2),(0,0.1)),Nbin1=200,Nbin2=200)
+
+x,y,m=df_histplot2(df1.filter(df1.snr_i_cModel>10).filter(df1.snr_r_cModel>10),"d(r-i)","snr_i_cModel",bounds=((-0.5,0.5),(10,30)),Nbin1=200,Nbin2=200)
