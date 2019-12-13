@@ -32,7 +32,13 @@ gal=gal.filter($"mag_i"<magcut)
 var stars=spark.read.parquet("refcat_v3_dc2_r2p1i.parquet")
 val cols=Array("id","ra","dec","ra_smeared","dec_smeared","i","i_smeared","r","r_smeared","isresolved","isagn")
 stars=stars.select(cols.head,cols.tail: _*).na.drop
+stars=stars.filter($"isresolved"===false)
 stars=stars.filter($"i_smeared"<magcut)
+
+stars=stars.filter($"ra".between(58.2,65.3))
+stars=stars.filter($"dec".between(-40.7,-33.6))
+stars=star.filter($"i_smeared">16)
+
 
 //OBJECT CAT
 var obj=spark.read.parquet(System.getenv("RUN2"))
@@ -42,6 +48,10 @@ obj=obj.select(cols.head,cols.tail: _*).na.drop
 //filter
 obj=obj.filter($"mag_i_cModel"<magcut)
 
+obj=obj.filter($"isresolved"===false)
+obj=obj.filter($"ra".between(58.2,65.3))
+obj=obj.filter($"dec".between(-40.7,-33.6))
+obj=star.filter($"mag_i_cModel">16)
 
 
 ///:load scripts/cross-tools.scala
