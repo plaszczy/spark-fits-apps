@@ -2,17 +2,25 @@ from df_tools import *
 from tools import *
 from histfile import *
 
+#cosmoXobj
 df1=spark.read.parquet("/lsst/DC2/df4.parquet")
 
+#refXobj
+df1=spark.read.parquet("/lsst/DC2/refcatXobj.parquet")
+#stars
+df1=df1.filter(df1.isresolved==False)
 
-df1=spark.read.parquet("/lsst/DC2/newstars.parquet")
 df1=df1.withColumnRenamed("i_smeared","mag_i")
 df1=df1.withColumnRenamed("r_smeared","mag_r")
 
 
-#cuts
-df1=df1.filter((df1["snr_i_cModel"]>1) & (df1["snr_r_cModel"]>1))
+#refcat
+ref=spark.read.parquet("/lsst/DC2/refcat_v3_dc2_r2p1i.parquet")
+stars=ref.filter(ref.isresolved==False)
+agn=ref.filter(ref.isagn==True)
+gal=ref.filter((ref.isagn==False)&(ref.isresolved==True))
 
+#cuts obj
 df1=df1.filter( (df1["clean"]==1)) 
 #df1=df1.filter(df1["extendedness"]==1)
 
@@ -23,7 +31,7 @@ df1=df1.withColumn("flux_i",F.pow(10.0,-(df1["mag_i"]-31.4)/2.5))
 #df1=df1.withColumn("dmag_i",df1["mag_i_cModel"]-df1["mag_i"])
 #df1=df1.withColumn("dmag_r",df1["mag_r_cModel"]-df1["mag_r"])
 
-#psf quantities
+#psf flux
 df1=df1.withColumn("dflux",df1["psFlux_i"]-df1["flux_i"])
 df1=df1.withColumn("mag_i_psf",-2.5*F.log10(df1.psFlux_i)+31.4)
 df1=df1.withColumn("mag_r_psf",-2.5*F.log10(df1.psFlux_r)+31.4)
@@ -78,7 +86,7 @@ xlabel("dx [arcsec]")
 df1=df1.filter(df1.r<0.6)
 
 
-x,y,m=df_histplot2(df1,"psf_x","psf_y",Nbin1=100,Nbin2=100,bounds=((-1,1),(-1,1))
+x,y,m=df_histplot2(df1,"psf_x","psf_y",Nbin1=100,Nbin2=100,bounds=((-1,1),(-1,1)))
 
 figure()
 X,Y=meshgrid(x,y)

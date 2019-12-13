@@ -41,8 +41,7 @@ def hist_stat(x,y,label="",newFig=True,doStat=True,log=True):
     bar_outline(x,y,label=label)
     ylim(0.8*min(y),1.2*max(y))
     if log:
-        semilogy()
-    axvline(0,c='k',lw=0.5)
+        yscale('log')
     xlabel(label)
         
     if doStat:
