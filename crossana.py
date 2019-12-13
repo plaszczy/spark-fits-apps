@@ -5,7 +5,7 @@ from histfile import *
 df1=spark.read.parquet("/lsst/DC2/df4.parquet")
 
 
-df1=spark.read.parquet("/lsst/DC2/stars.parquet")
+df1=spark.read.parquet("/lsst/DC2/newstars.parquet")
 df1=df1.withColumnRenamed("i_smeared","mag_i")
 df1=df1.withColumnRenamed("r_smeared","mag_r")
 
@@ -14,12 +14,23 @@ df1=df1.withColumnRenamed("r_smeared","mag_r")
 df1=df1.filter((df1["snr_i_cModel"]>1) & (df1["snr_r_cModel"]>1))
 
 df1=df1.filter( (df1["clean"]==1)) 
-#df1=df.filter(df1["extendedness"]==1)) 
+#df1=df1.filter(df1["extendedness"]==1)
 
 df1=df1.withColumn("flux_i",F.pow(10.0,-(df1["mag_i"]-31.4)/2.5))
-df1=df1.withColumn("dflux",df1["cModelFlux_i"]-df1["flux_i"])
-df1=df1.withColumn("dmag_i",df1["mag_i_cModel"]-df1["mag_i"])
-df1=df1.withColumn("dmag_r",df1["mag_r_cModel"]-df1["mag_r"])
+
+#cmodel
+#df1=df1.withColumn("dflux",df1["cModelFlux_i"]-df1["flux_i"])
+#df1=df1.withColumn("dmag_i",df1["mag_i_cModel"]-df1["mag_i"])
+#df1=df1.withColumn("dmag_r",df1["mag_r_cModel"]-df1["mag_r"])
+
+#psf quantities
+df1=df1.withColumn("dflux",df1["psFlux_i"]-df1["flux_i"])
+df1=df1.withColumn("mag_i_psf",-2.5*F.log10(df1.psFlux_i)+31.4)
+df1=df1.withColumn("mag_r_psf",-2.5*F.log10(df1.psFlux_r)+31.4)
+df1=df1.withColumn("dmag_i",df1["mag_i_psf"]-df1["mag_i"])
+df1=df1.withColumn("dmag_r",df1["mag_r_psf"]-df1["mag_r"])
+
+
 
 #df1=df1.withColumn("sigpos",df1["sigr"]/df1["snr_i_cModel"]).drop("sigr")
 df1=df1.withColumn("dx",F.degrees(F.sin((df1["theta_s"]+df1["theta_t"])/2)*(df1["phi_s"]-df1["phi_t"]))*3600)
@@ -139,4 +150,4 @@ x,y,m=df_histplot2(df1,"dmag_i","snr_i_cModel",bounds=((-0.2,0.2),(0,100)),Nbin1
 
 x,y,m=df_histplot2(df1,"d(r-i)","r",bounds=((-0.2,0.2),(0,0.1)),Nbin1=200,Nbin2=200)
 
-x,y,m=df_histplot2(df1.filter(df1.snr_i_cModel>10).filter(df1.snr_r_cModel>10),"d(r-i)","snr_i_cModel",bounds=((-0.5,0.5),(10,30)),Nbin1=200,Nbin2=200)
+x,y,m=df_histplot2(df1,"d(r-i)","snr_i_cModel",bounds=((-0.5,0.5),(5,30)),Nbin1=200,Nbin2=200)
