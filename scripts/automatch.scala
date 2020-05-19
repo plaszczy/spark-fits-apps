@@ -1,19 +1,23 @@
 
-//val nside=8
-//:load cross-tools.scala
+//max (plane) radius in arcmin
+val rcut=10.0
+
+val nside=256
+
+:load cross-tools.scala
+
 
 val timer=new Timer
 val start=timer.time
 
 
-//max (plane) radius in arcmin
-val rcut=250.0
 
 //SOURCE
-var source=spark.read.parquet("deg.parquet")
+val input=spark.read.parquet("deg.parquet")
+var source=input
 
 //TARGET
-var target=source.withColumnRenamed("id","id2").drop("degtrue")
+var target=input.withColumnRenamed("id","id2").drop("degtrue")
 
 
 /*--------------------------------------------------------*/
@@ -105,10 +109,8 @@ val df=source.join(deg,"id")
 df.withColumn("diff",$"count"-$"count").describe("diff").show
 
 
-val sumDegIn=source.agg(F.sum("degtrue")).first.getLong(0).toFloat
-println(f"Input mean degree=${sumDegIn/Ns}%3.2f")
-
-val sumDegOut=deg.agg(F.sum("count")).first.getLong(0).toFloat
-println(f"Output mean degree=${sumDegOut/Ns}%3.2f")
-
+val sumDegIn=source.agg(F.sum("degtrue")).first.getLong(0)
+val sumDegOut=deg.agg(F.sum("count")).first.getLong(0)
+//attention meandegree=sumDegOut.toFloat/Ns
+println(s"Sum degree=$sumDegIn vs. $sumDegOut")
 require(sumDegOut==sumDegIn)
