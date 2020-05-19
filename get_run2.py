@@ -48,7 +48,7 @@ df=df_all.filter((df_all.good==1)&(df_all.clean==1))
 
 
 #COLUMNS
-cols="ra,dec,extendedness,blendedness,IxxPSF_i,IxyPSF_i,psf_fwhm_i,IyyPSF_i"
+cols="ra,dec,extendedness,blendedness"
 for b in ['i']:
 #for b in ['u','g','r','i','z','y']:
     s=",psFlux_flag_{0},psFlux_{0},psFluxErr_{0},mag_{0},mag_{0}_cModel,magerr_{0}_cModel,snr_{0}_cModel".format(b)
