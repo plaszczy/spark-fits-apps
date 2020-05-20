@@ -1,23 +1,33 @@
 #!/bin/bash
 
 nargs=$#
+echo $nargs
 
-if ! [ $nargs -eq 2 ]; then
+if [ $nargs -lt 3 ]; then
 echo "##################################################################################"
 echo "usage: "
-echo "./run_sparkdeg.sh zmax sep[arcmin] #nodes"
+echo "./run_sparkdeg.sh zmax sep[arcmin] #nodes t[min](def=10)"
 echo "##################################################################################"
 exit
 fi
 
+#optional
+declare -i t
+t=10
+if [ $# -eq 4 ] ; then
+t=$4
+fi
 
+if [ $t -gt 30 ]; then
+queue=interactive
+else
+queue=debug
+fi
 
 
 zmax=$1
 sep=$2
-
 nodes=$3
-t="00:10:00"
 
 
 export SPARKVERSION=2.4.4
@@ -27,7 +37,7 @@ cat > run_z$1_sep$2.sh <<EOF
 #script writing
 #!/bin/bash
 
-#SBATCH -q debug
+#SBATCH -q $queue
 #SBATCH -N $nodes
 #SBATCH -C haswell
 #SBATCH -t $t
@@ -39,11 +49,12 @@ cat > run_z$1_sep$2.sh <<EOF
 #init
 source $HOME/desc-spark/scripts/init_spark.sh
 
-#trasmit variable
-export zmax=$zmax
-export arcmin=$arcmin
+#check spark3d
+export EXEC_CLASSPATH=$HOME/SparkLibs
+JARS=jhealpix.jar,spark-fits.jar,spark3d_2.11-0.3.1.jar
 
-shifter spark-shell $SPARKOPTS --jars $JARS --conf spark.driver.args="$sep" < autocolore.scala
+#decode
+shifter spark-shell $SPARKOPTS --jars \$JARS --conf spark.driver.args="$zmax $sep" < autocolore.scala
 
 stop-all.sh
 
