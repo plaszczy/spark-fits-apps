@@ -53,7 +53,7 @@ source $HOME/desc-spark/scripts/init_spark.sh
 export EXEC_CLASSPATH=$HOME/SparkLibs
 JARS=jhealpix.jar,spark-fits.jar,spark3d_2.11-0.3.1.jar
 
-#decode
+#decode zmax
 shifter spark-shell $SPARKOPTS --jars \$JARS --conf spark.driver.args="$zmax $sep" < autocolore.scala
 
 stop-all.sh
