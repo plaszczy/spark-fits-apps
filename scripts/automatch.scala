@@ -1,8 +1,16 @@
+import scala.math.{log,toRadians,pow,floor}
 
-//max (plane) radius in arcmin
+//args from --conf spark.driver.args="10"
+//val args = sc.getConf.get("spark.driver.args").split("\\s+")
+//val rcut=args(0).toDouble
+
+//arcmin:
 val rcut=10.0
 
-val nside=256
+val L=toRadians(rcut/60)
+val i=floor(-log(L)/log(2.0)).toInt
+val nside=pow(2,i).toInt
+
 
 :load cross-tools.scala
 

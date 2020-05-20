@@ -10,17 +10,19 @@ print(sepcut)
 nb = 1000
 
 #deg
-width=3*u.deg
+width=1*u.deg
 
-ra_cen=(2*rand()-1)*90
-ra_min=max(-90,ra_cen-width.value/2)
-ra_max=min(90,ra_cen+width.value/2)
+#-90<dec<90
+dec_cen=(2*rand()-1)*90
+dec_min=max(-90,dec_cen-width.value)
+dec_max=min(90,dec_cen+width.value)
 
-dec_cen=rand()*360.
-dec_min = max(0,dec_cen-width.value/2)
-dec_max = min(360,dec_cen+width.value/2)
+#0<ra<360
+ra_cen=rand()*360.
+ra_min = max(0,ra_cen-width.value)
+ra_max = min(360,ra_cen+width.value)
 
-print("center=[{},{}], width={}".format(ra_cen,dec_cen,width))
+print("center=[ra={},dec={}], width={}".format(ra_cen,dec_cen,width))
 
 ra = np.random.uniform(ra_min, ra_max, nb)
 xmin = (np.sin(dec_min*np.pi/180.)+1)/2.
@@ -100,3 +102,15 @@ print("deg.parquet written")
  ##       156.26379813, 171.66221125, 188.57800158, 207.16069321,
  ##       227.5745445 , 250.        ])
 
+L=deg2rad(sepcut/60) 
+i=-log2(L).astype('int')
+#optmiste
+nside=2**i
+#pessimiste
+#nside=2**(i-1)
+step(sepcut,nside)
+semilogx()
+yticks(2**(arange(8)+3)) 
+
+xlabel(r"$\Delta \theta\quad [arcmin]$")
+ylabel("nside")
