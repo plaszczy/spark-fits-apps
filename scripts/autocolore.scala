@@ -4,12 +4,19 @@ import org.apache.spark.sql.Row
 import org.apache.spark.storage.StorageLevel
 
 //cuts
-val rcut=10.0
-val nside=256
-:load cross-tools.scala
+//val sepcut=10.0
+//val nside=256
+//:load cross-tools.scala
+
+//val args = sc.getConf.get("spark.driver.args").split("\\s+")
 
 val zmin=1.0
-val zmax=1.01
+//val zmax=1.01
+//already decode in cross-tools
+val zmax=args(1).toDouble
+println(s"sepcut=$sepcut arcmin")
+
+println(s"readshift shell [$zmin,$zmax]")
 
 
 
@@ -92,8 +99,8 @@ matched=matched.filter('id=!='id2)
 //add distance column
 matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.asin(F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")/2)*2).withColumn("r",F.degrees($"d")*60).drop("dx","dy","dz","d")
 
-//cut at rcut
-matched=matched.filter($"r"<rcut).persist(StorageLevel.MEMORY_AND_DISK)
+//cut at sepcut
+matched=matched.filter($"r"<sepcut).drop("r").persist(StorageLevel.MEMORY_AND_DISK)
 
 println("==> joining on ipix: "+matched.columns.mkString(", "))
 val nmatch=matched.count()
@@ -117,9 +124,12 @@ timer.print("groupBy")
 val fulltime=(timer.time-start)*1e-9
 println(f"TOT TIME=${fulltime}")
 
-val meanDeg=deg.agg(F.sum("count")).first.getLong(0).toDouble/Ns
-println(s"Mean degree for ${rcut}arcmin sep = $meanDeg")
+val sumDeg=deg.agg(F.sum("count")).first.getLong(0)
+val meanDeg=sumDeg.toDouble/Ns
+println(s"Degree: sum=$sumDeg avg=$meanDeg")
 
 val nodes=System.getenv("SLURM_JOB_NUM_NODES")
-println("zmin,zmax,Ns,rcut,nside,nmatch,<k>,T(s)")
-println(f"||$zmin,$zmax,$Ns,$rcut,$nside,$nmatch,$meanDeg%5.3f,$fulltime%.1f")
+println("zmin,zmax,Ns,sepcut,nside,nmatch,sumdeg,meandeg,T(s)")
+println(f"||$zmin,$zmax,$Ns,$sepcut,$nside,$nmatch,$sumDeg,$meanDeg%5.3f,$fulltime%.1f")
+
+System.exit(0)

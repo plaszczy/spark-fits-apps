@@ -1,12 +1,11 @@
 #!/bin/bash
 
 nargs=$#
-echo $nargs
 
 if [ $nargs -lt 3 ]; then
 echo "##################################################################################"
 echo "usage: "
-echo "./run_sparkdeg.sh zmax sep[arcmin] #nodes t[min](def=10)"
+echo "./run_sparkdeg.sh sep[arcmin] zmax Nodes (t[min])"
 echo "##################################################################################"
 exit
 fi
@@ -24,25 +23,26 @@ else
 queue=debug
 fi
 
-
-zmax=$1
-sep=$2
+sep=$1
+zmax=$2
 nodes=$3
 
 
 export SPARKVERSION=2.4.4
 IMG=registry.services.nersc.gov/plaszczy/spark_desc:v$SPARKVERSION
 
-cat > run_z$1_sep$2.sh <<EOF
-#script writing
+prefix="s${sep}_z${zmax}_N${nodes}"
+slfile="run_$prefix.sl"
+echo $slfile
+cat > $slfile <<EOF
 #!/bin/bash
 
 #SBATCH -q $queue
 #SBATCH -N $nodes
 #SBATCH -C haswell
 #SBATCH -t $t
-#SBATCH -e spark_z$1_sep$2_%j.err
-#SBATCH -o spark_z$1_sep$2_%j.out
+#SBATCH -e slurm_${prefix}_%j.err
+#SBATCH -o slurm_${prefix}_%j.out
 #SBATCH --image=$IMG
 #SBATCH --volume="/global/cscratch1/sd/$USER/tmpfiles:/tmp:perNodeCache=size=200G"
 
@@ -51,14 +51,15 @@ source $HOME/desc-spark/scripts/init_spark.sh
 
 #check spark3d
 export EXEC_CLASSPATH=$HOME/SparkLibs
-JARS=jhealpix.jar,spark-fits.jar,spark3d_2.11-0.3.1.jar
+JARS=\$EXEC_CLASSPATH/jhealpix.jar,\$EXEC_CLASSPATH/spark-fits.jar,\$EXEC_CLASSPATH/spark3d.jar
 
-#decode zmax
-shifter spark-shell $SPARKOPTS --jars \$JARS --conf spark.driver.args="$zmax $sep" < autocolore.scala
+shifter spark-shell $SPARKOPTS --jars \$JARS --conf spark.driver.args="${sep} ${zmax}" -I cross-tools.scala -i autocolore.scala
 
 stop-all.sh
 
 EOF
 
 
-cat run_z$1_sep$2.sh
+cat $slfile
+
+sbatch $slfile

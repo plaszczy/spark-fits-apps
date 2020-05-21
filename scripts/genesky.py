@@ -1,7 +1,7 @@
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 import numpy as np
-from tools import *
+#from tools import *
 
 sepcut=10*u.arcmin
 
@@ -13,12 +13,12 @@ nb = 1000
 width=1*u.deg
 
 #-90<dec<90
-dec_cen=(2*rand()-1)*90
+dec_cen=(2*np.random.uniform()-1)*90
 dec_min=max(-90,dec_cen-width.value)
 dec_max=min(90,dec_cen+width.value)
 
 #0<ra<360
-ra_cen=rand()*360.
+ra_cen=np.random.uniform()*360.
 ra_min = max(0,ra_cen-width.value)
 ra_max = min(360,ra_cen+width.value)
 
@@ -54,9 +54,9 @@ for i in id:
     assert w1==w2
     deg[i]=w1
 
-clf()
-hist_plot(deg)
-show()
+#clf()
+#hist_plot(deg)
+#show()
 
 from pandas import DataFrame
 d = {"id":id,'ra': ra, 'dec': dec,"degtrue":deg}
@@ -102,15 +102,14 @@ print("deg.parquet written")
  ##       156.26379813, 171.66221125, 188.57800158, 207.16069321,
  ##       227.5745445 , 250.        ])
 
-L=deg2rad(sepcut/60) 
-i=-log2(L).astype('int')
+#L=deg2rad(sepcut/60) 
+#i=-log2(L).astype('int')
 #optmiste
-nside=2**i
+#nside=2**i
 #pessimiste
 #nside=2**(i-1)
-step(sepcut,nside)
-semilogx()
-yticks(2**(arange(8)+3)) 
-
-xlabel(r"$\Delta \theta\quad [arcmin]$")
-ylabel("nside")
+#step(sepcut,nside)
+#semilogx()
+#yticks(2**(arange(8)+3)) 
+#xlabel(r"$\Delta \theta\quad [arcmin]$")
+#ylabel("nside")

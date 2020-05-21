@@ -9,6 +9,22 @@ import healpix.essentials.Scheme.NESTED
 import org.apache.spark.sql.functions.udf
 import org.apache.spark.sql.types._
 
+import scala.math.{log,toRadians,pow,floor}
+
+//args from --conf spark.driver.args="10"
+//compute nside from sep=args(0)
+val args = sc.getConf.get("spark.driver.args").split("\\s+")
+val sepcut=args(0).toDouble
+
+val L=toRadians(sepcut/60)
+val i=floor(-log(L)/log(2.0)).toInt
+val nside=pow(2,i).toInt
+
+println(s"sep=$sepcut arcmin -> nside=$nside")
+
+
+
+
 //Timer
 class Timer (var t0:Double=System.nanoTime().toDouble,   var dt:Double=0)  {
 

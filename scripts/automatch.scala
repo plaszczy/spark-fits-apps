@@ -2,17 +2,17 @@ import scala.math.{log,toRadians,pow,floor}
 
 //args from --conf spark.driver.args="10"
 //val args = sc.getConf.get("spark.driver.args").split("\\s+")
-//val rcut=args(0).toDouble
+//val sepcut=args(0).toDouble
 
 //arcmin:
-val rcut=10.0
-
-val L=toRadians(rcut/60)
+/*
+defined in cross-tools
+val sepcut=10.0
+val L=toRadians(sepcut/60)
 val i=floor(-log(L)/log(2.0)).toInt
 val nside=pow(2,i).toInt
-
-
 :load cross-tools.scala
+ */
 
 
 val timer=new Timer
@@ -87,10 +87,10 @@ matched=matched.filter('id=!='id2)
 
 //add distance column
 //matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).drop("dx","dy","dz").withColumn("r",F.degrees($"d")*60).drop("d")
-matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.asin(F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")/2)*2).withColumn("r",F.degrees($"d")*60).drop("dx","dy","dz,d")
+matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.asin(F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")/2)*2).withColumn("r",F.degrees($"d")*60).drop("dx","dy","dz","d")
 
-//cut at rcut
-matched=matched.filter($"r"<rcut)
+//cut at sepcut
+matched=matched.filter($"r"<sepcut)
 
 println("==> joining on ipix: "+matched.columns.mkString(", "))
 val nmatch=matched.cache.count()
@@ -122,3 +122,6 @@ val sumDegOut=deg.agg(F.sum("count")).first.getLong(0)
 //attention meandegree=sumDegOut.toFloat/Ns
 println(s"Sum degree=$sumDegIn vs. $sumDegOut")
 require(sumDegOut==sumDegIn)
+
+
+System.exit(0)
