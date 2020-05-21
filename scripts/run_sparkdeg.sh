@@ -53,7 +53,7 @@ source $HOME/desc-spark/scripts/init_spark.sh
 export EXEC_CLASSPATH=$HOME/SparkLibs
 JARS=\$EXEC_CLASSPATH/jhealpix.jar,\$EXEC_CLASSPATH/spark-fits.jar,\$EXEC_CLASSPATH/spark3d.jar
 
-shifter spark-shell $SPARKOPTS --jars \$JARS --conf spark.driver.args="${sep} ${zmax}" -I cross-tools.scala -i autocolore.scala
+shifter spark-shell $SPARKOPTS --jars \$JARS --conf spark.driver.args="${sep} ${zmax}" -I Timer.scala -i autocolore.scala
 
 stop-all.sh
 
