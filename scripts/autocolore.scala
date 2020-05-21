@@ -121,15 +121,15 @@ println(deg.cache.count)
 timer.step
 timer.print("groupBy")
 
-val fulltime=(timer.time-start)*1e-9
-println(f"TOT TIME=${fulltime}")
+val fulltime=(timer.time-start)*1e-9.toInt
+println(s"TOT TIME=${fulltime} s")
 
 val sumDeg=deg.agg(F.sum("count")).first.getLong(0)
 val meanDeg=sumDeg.toDouble/Ns
 println(s"Degree: sum=$sumDeg avg=$meanDeg")
 
 val nodes=System.getenv("SLURM_JOB_NUM_NODES")
-println("zmin,zmax,Ns,sepcut,nside,nmatch,sumdeg,meandeg,T(s)")
-println(f"||$zmin,$zmax,$Ns,$sepcut,$nside,$nmatch,$sumDeg,$meanDeg%5.3f,$fulltime%.1f")
+println("|zmin,zmax,Ns,sep,nside,nmatch,sumdeg,nodes,meandeg,tsec")
+println(f"||$zmin,$zmax,$Ns,$sepcut,$nside,$nmatch,$sumDeg,$meanDeg%5.3f,$nodes,$fulltime%.1f")
 
 System.exit(0)

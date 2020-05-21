@@ -18,7 +18,7 @@ val sepcut=args(0).toDouble
 
 val L=toRadians(sepcut/60)
 val i=floor(-log(L)/log(2.0)).toInt
-val nside=pow(2,i).toInt
+val nside=pow(2,i-1).toInt
 
 println(s"sep=$sepcut arcmin -> nside=$nside")
 
