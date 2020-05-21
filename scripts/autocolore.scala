@@ -99,6 +99,11 @@ matched=matched.filter('id=!='id2)
 //add distance column
 matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.asin(F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")/2)*2).withColumn("r",F.degrees($"d")*60).drop("dx","dy","dz","d")
 
+//matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).withColumn("r",F.degrees($"d")*60).drop("dx","dy","dz","d")
+
+matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.asin(F.hypot($"dx",F.hypot($"dy",$"dz"))/2)*2).withColumn("r",F.degrees($"d")*60).drop("dx","dy","dz","d")
+
+
 //cut at sepcut
 matched=matched.filter($"r"<sepcut).drop("r").persist(StorageLevel.MEMORY_AND_DISK)
 
@@ -121,15 +126,15 @@ println(deg.cache.count)
 timer.step
 timer.print("groupBy")
 
-val fulltime=(timer.time-start)*1e-9.toInt
-println(s"TOT TIME=${fulltime} s")
+val fulltime=(timer.time-start)*1e-9/60
+println(s"TOT TIME=${fulltime} mins")
 
 val sumDeg=deg.agg(F.sum("count")).first.getLong(0)
 val meanDeg=sumDeg.toDouble/Ns
 println(s"Degree: sum=$sumDeg avg=$meanDeg")
 
 val nodes=System.getenv("SLURM_JOB_NUM_NODES")
-println("|zmin,zmax,Ns,sep,nside,nmatch,sumdeg,nodes,meandeg,tsec")
-println(f"||$zmin,$zmax,$Ns,$sepcut,$nside,$nmatch,$sumDeg,$meanDeg%5.3f,$nodes,$fulltime%.1f")
+println("|||sep,nside,zmin,zmax,Ns,nmatch,sumdeg,nodes,meandeg,tmin")
+println(f"||$sepcut,$nside,$zmin,$zmax,$Ns,$nmatch,$sumDeg,$meanDeg%5.3f,$nodes,$fulltime%.2f")
 
 System.exit(0)
