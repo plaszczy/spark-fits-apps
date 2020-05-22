@@ -1,26 +1,21 @@
 #!/bin/bash
 
+declare -i nargs
 nargs=$#
 
 if [ $nargs -lt 3 ]; then
 echo "##################################################################################"
 echo "usage: "
-echo "./run_sparkdeg.sh sep[arcmin] zmax Nodes (t[min])"
+echo "./run_sparkdeg.sh sep(arcmin) zmax Nodes (#iterations)"
 echo "##################################################################################"
 exit
 fi
 
 #optional
-declare -i t
-t=10
+declare -i nit
+nit=1
 if [ $# -eq 4 ] ; then
-t=$4
-fi
-
-if [ $t -gt 30 ]; then
-queue=interactive
-else
-queue=debug
+nit=$4
 fi
 
 sep=$1
@@ -37,10 +32,10 @@ echo $slfile
 cat > $slfile <<EOF
 #!/bin/bash
 
-#SBATCH -q $queue
+#SBATCH -q debug
 #SBATCH -N $nodes
 #SBATCH -C haswell
-#SBATCH -t $t
+#SBATCH -t 00:20:00
 #SBATCH -e slurm_${prefix}_%j.err
 #SBATCH -o slurm_${prefix}_%j.out
 #SBATCH --image=$IMG
@@ -49,11 +44,11 @@ cat > $slfile <<EOF
 #init
 source $HOME/desc-spark/scripts/init_spark.sh
 
-#check spark3d
-export EXEC_CLASSPATH=$HOME/SparkLibs
-JARS=\$EXEC_CLASSPATH/jhealpix.jar,\$EXEC_CLASSPATH/spark-fits.jar,\$EXEC_CLASSPATH/spark3d.jar
+#jars
+LIBS=$HOME/SparkLibs
+JARS=\$LIBS/jhealpix.jar,\$LIBS/spark-fits.jar,\$LIBS/spark3d.jar
 
-shifter spark-shell $SPARKOPTS --jars \$JARS --conf spark.driver.args="${sep} ${zmax}" -I Timer.scala -i autocolore.scala
+shifter spark-shell $SPARKOPTS --jars \$JARS --conf spark.driver.args="${sep} ${zmax}" -I hputils.scala -I Timer.scala -i autocolore.scala
 
 stop-all.sh
 
@@ -61,5 +56,8 @@ EOF
 
 
 cat $slfile
-
-sbatch $slfile
+for it in $(seq $nit)
+do
+    echo $it
+    sbatch $slfile
+done
