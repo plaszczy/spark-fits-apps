@@ -1,18 +1,15 @@
+//spark-shell --jars jhealpix.jar
 import scala.math.{log,toRadians,pow,floor}
 
-//args from --conf spark.driver.args="10"
-//val args = sc.getConf.get("spark.driver.args").split("\\s+")
-//val sepcut=args(0).toDouble
-
-//arcmin:
-/*
-defined in cross-tools
 val sepcut=10.0
+
+
+//nside
 val L=toRadians(sepcut/60)
 val i=floor(-log(L)/log(2.0)).toInt
-val nside=pow(2,i).toInt
+val nside=pow(2,i-1).toInt
+
 :load cross-tools.scala
- */
 
 
 val timer=new Timer
@@ -124,6 +121,3 @@ val sumDegOut=deg.agg(F.sum("count")).first.getLong(0)
 //attention meandegree=sumDegOut.toFloat/Ns
 println(s"Sum degree=$sumDegIn vs. $sumDegOut")
 require(sumDegOut==sumDegIn)
-
-
-System.exit(0)
