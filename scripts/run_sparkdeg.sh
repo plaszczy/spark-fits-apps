@@ -35,7 +35,7 @@ cat > $slfile <<EOF
 #SBATCH -q debug
 #SBATCH -N $nodes
 #SBATCH -C haswell
-#SBATCH -t 00:20:00
+#SBATCH -t 00:10:00
 #SBATCH -e slurm_${prefix}_%j.err
 #SBATCH -o slurm_${prefix}_%j.out
 #SBATCH --image=$IMG

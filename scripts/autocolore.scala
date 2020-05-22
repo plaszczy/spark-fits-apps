@@ -95,9 +95,6 @@ matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_
 //flat sky
 //matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).withColumn("r",F.degrees($"d")*60).drop("dx","dy","dz","d")
 
-//hypot
-//matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.asin(F.hypot($"dx",F.hypot($"dy",$"dz"))/2)*2).withColumn("r",F.degrees($"d")*60).drop("dx","dy","dz","d")
-
 
 //cut at sepcut
 matched=matched.filter($"r"<sepcut).drop("r").persist(StorageLevel.MEMORY_AND_DISK)
@@ -136,7 +133,7 @@ val fulltime=(timer.time-start)*1e-9/60
 println(s"TOT TIME=${fulltime} mins")
 
 
-println("|||sep,nside,zmin,zmax,Ns,nmatch,nodes,tmin")
-println(f"||$sepcut,$nside,$zmin,$zmax,$Ns,$nmatch,$nodes,$fulltime%.2f")
+println("<>sep,nside,zmin,zmax,Ns,nmatch,nodes,tmin")
+println(f"@$sepcut,$nside,$zmin,$zmax,$Ns,$nmatch,$nodes,$fulltime%.2f")
 
 System.exit(0)
