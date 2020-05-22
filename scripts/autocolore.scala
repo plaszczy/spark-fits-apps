@@ -7,6 +7,8 @@ import org.apache.spark.storage.StorageLevel
 //compute nside from sep=args(0)
 val args = sc.getConf.get("spark.driver.args").split("\\s+")
 val sepcut=args(0).toDouble
+val rcut=toRadians(sepcut/60)
+
 val zmin=1.0
 val zmax=args(1).toDouble
 
@@ -90,14 +92,18 @@ var matched=dup.join(target,"ipix").drop("ipix")
 matched=matched.filter('id=!='id2)
 
 //add distance column
-matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.asin(F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")/2)*2).withColumn("r",F.degrees($"d")*60).drop("dx","dy","dz","d")
+//matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.asin(F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")/2)*2).withColumn("r",F.degrees($"d")*60).drop("dx","dy","dz","d")
+
+matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("r",F.asin(F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")/2)*2).drop("dx","dy","dz","theta_t","theta_s","phi_s","phi_t")
 
 //flat sky
 //matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).withColumn("r",F.degrees($"d")*60).drop("dx","dy","dz","d")
 
 
 //cut at sepcut
-matched=matched.filter($"r"<sepcut).drop("r").persist(StorageLevel.MEMORY_AND_DISK)
+//matched=matched.filter($"r"<sepcut).drop("r")
+matched=matched.filter($"r"<rcut).drop("r")
+//.persist(StorageLevel.MEMORY_AND_DISK)
 
 println("==> joining on ipix: "+matched.columns.mkString(", "))
 val nmatch=matched.count()
