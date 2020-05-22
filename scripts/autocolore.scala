@@ -2,18 +2,24 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.{functions=>F}
 import org.apache.spark.sql.Row
 import org.apache.spark.storage.StorageLevel
+
+import scala.math.{sin,toRadians}
+
 // spark3D implicits
-import com.astrolabsoftware.spark3d._
+//import com.astrolabsoftware.spark3d._
 
 
 //args from --conf spark.driver.args="10"
 //compute nside from sep=args(0)
 val args = sc.getConf.get("spark.driver.args").split("\\s+")
-val sepcut=args(0).toDouble
-val rcut=toRadians(sepcut/60)
+val sepcut:Double=args(0).toDouble
+val thetacut:Double=toRadians(sepcut/60)
+val rcut:Double=2*sin(thetacut/2)
+val r2cut:Double=rcut*rcut
 
-val zmin=1.0
-val zmax=args(1).toDouble
+
+val zmin:Double=1.0
+val zmax:Double=args(1).toDouble
 
 println(s"sep=$sepcut arcmin -> nside=$nside")
 println(s"readshift shell [$zmin,$zmax]")
@@ -36,6 +42,7 @@ val Ns=source.count
 println(f"input size=${Ns/1e6}%3.2f M")
 timer.step
 timer.print("source cache")
+println("source partitions="+source.rdd.getNumPartitions)
 
 //DUPLICATES
 val dfn=source.withColumn("neighbours",pix_neighbours($"ipix"))
@@ -57,34 +64,25 @@ val Ndup=dup.count
 println(f"duplicates size=${Ndup/1e6}%3.2f M")
 
 timer.step
-timer.print("duplicates cache")
+println("dup partitions="+dup.rdd.getNumPartitions)
 
 ///////////////////////////////////////////
 //PAIRS
 //join by ipix: tous les candidats paires
-var matched=source.join(dup,"ipix").drop("ipix")
+val pairs=source.join(dup,"ipix").drop("ipix").filter('id=!='id2)
+//val pairs=dup.join(source,"ipix").drop("ipix").filter('id=!='id2)
 
-//filter same id
-matched=matched.filter('id=!='id2)
+//cut on distance
+val edges=pairs.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("s",F.asin(F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")/2)*2).drop("dx","dy","dz","theta_t","theta_s","phi_s","phi_t").filter($"s"<thetacut).drop("s")
 
-//add distance column
-//matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.asin(F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")/2)*2).withColumn("r",F.degrees($"d")*60).drop("dx","dy","dz","d")
+//val edges=pairs.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("r2",($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).drop("dx","dy","dz","theta_t","theta_s","phi_s","phi_t").filter($"r2"<r2cut).drop("r2")
 
-matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("r",F.asin(F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")/2)*2).drop("dx","dy","dz","theta_t","theta_s","phi_s","phi_t")
-
-//flat sky
-//matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).withColumn("r",F.degrees($"d")*60).drop("dx","dy","dz","d")
-
-
-//cut at sepcut
-//matched=matched.filter($"r"<sepcut).drop("r")
-matched=matched.filter($"r"<rcut).drop("r")
 //.persist(StorageLevel.MEMORY_AND_DISK)
 
-println("==> joining on ipix: "+matched.columns.mkString(", "))
-val nmatch=matched.count()
+println("==> joining on ipix: "+edges.columns.mkString(", "))
+val nmatch=edges.count()
 println(f"#pair-associations=${nmatch/1e6}%3.2f M")
-matched.printSchema
+edges.printSchema
 
 
 timer.step
@@ -97,7 +95,7 @@ val nodes=System.getenv("SLURM_JOB_NUM_NODES")
 //release mem
 dup.unpersist
 
-val deg=matched.groupBy("id").count
+val deg=edges.groupBy("id").count
 println(deg.cache.count)
 
 timer.step
