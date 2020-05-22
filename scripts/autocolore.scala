@@ -2,6 +2,9 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.{functions=>F}
 import org.apache.spark.sql.Row
 import org.apache.spark.storage.StorageLevel
+// spark3D implicits
+import com.astrolabsoftware.spark3d._
+
 
 //args from --conf spark.driver.args="10"
 //compute nside from sep=args(0)
@@ -24,30 +27,17 @@ val input=df_all.filter($"z".between(zmin,zmax)).drop("z")
 val timer=new Timer
 val start=timer.time
 
-
-
 //SOURCE
-//add id
-var source=input.withColumn("id",F.monotonicallyIncreasingId).drop("z")
-
-//TARGET
-var target=source.withColumnRenamed("id","id2")
-
-
-/*--------------------------------------------------------*/
-
-//add theta-phi and healpixels
-source=source.withColumn("theta_s",F.radians(F.lit(90)-F.col("dec"))).withColumn("phi_s",F.radians("ra"))
-source=source.withColumn("ipix",Ang2pix($"theta_s",$"phi_s")).drop("ra","dec")
+//add id+ipix
+val source=input.withColumn("id",F.monotonicallyIncreasingId).drop("z").withColumn("theta_s",F.radians(F.lit(90)-F.col("dec"))).withColumn("phi_s",F.radians("ra")).withColumn("ipix",Ang2pix($"theta_s",$"phi_s")).drop("ra","dec").cache()
 
 println("*** caching source: "+source.columns.mkString(", "))
-val Ns=source.cache.count
+val Ns=source.count
 println(f"input size=${Ns/1e6}%3.2f M")
-
 timer.step
 timer.print("source cache")
 
-//ADD DUPLICATES
+//DUPLICATES
 val dfn=source.withColumn("neighbours",pix_neighbours($"ipix"))
 
 val dups=new Array[org.apache.spark.sql.DataFrame](9)
@@ -60,33 +50,19 @@ for (i <- 0 to 7) {
 }
 dups(8)=source
 
-val dup=dups.reduceLeft(_.union(_))
+val dup=dups.reduceLeft(_.union(_)).withColumnRenamed("id","id2").withColumnRenamed("theta_s","theta_t").withColumnRenamed("phi_s","phi_t").cache
 
-println("*** caching source+duplicates: "+dup.columns.mkString(", "))
-val Ndup=dup.cache().count
-println(f"source+duplicates size=${Ndup/1e6}%3.2f M")
+println("*** caching duplicates: "+dup.columns.mkString(", "))
+val Ndup=dup.count
+println(f"duplicates size=${Ndup/1e6}%3.2f M")
 
 timer.step
 timer.print("duplicates cache")
 
-/************************/
-//TARGET=cosmodc2
-
-//add healpixels
-target=target.withColumn("theta_t",F.radians(F.lit(90)-F.col("dec"))).withColumn("phi_t",F.radians("ra"))
-target=target.withColumn("ipix",Ang2pix($"theta_t",$"phi_t")).drop("ra","dec")
-
-println("*** caching target: "+target.columns.mkString(", "))
-val Nt=target.cache().count
-println(f"target size=${Nt/1e6}%3.2f M")
-
-timer.step
-timer.print("target cache")
-
 ///////////////////////////////////////////
 //PAIRS
 //join by ipix: tous les candidats paires
-var matched=dup.join(target,"ipix").drop("ipix")
+var matched=source.join(dup,"ipix").drop("ipix")
 
 //filter same id
 matched=matched.filter('id=!='id2)
@@ -120,7 +96,6 @@ val nodes=System.getenv("SLURM_JOB_NUM_NODES")
 /*
 //release mem
 dup.unpersist
-target.unpersist
 
 val deg=matched.groupBy("id").count
 println(deg.cache.count)
