@@ -21,7 +21,7 @@ fi
 sep=$1
 zmax=$2
 nodes=$3
-
+ncores=$(($nodes*32))
 
 export SPARKVERSION=2.4.4
 IMG=registry.services.nersc.gov/plaszczy/spark_desc:v$SPARKVERSION
@@ -40,6 +40,7 @@ cat > $slfile <<EOF
 #SBATCH -o slurm_${prefix}_%j.out
 #SBATCH --image=$IMG
 #SBATCH --volume="/global/cscratch1/sd/$USER/tmpfiles:/tmp:perNodeCache=size=200G"
+printenv | grep SPARK
 
 #init
 source $HOME/desc-spark/scripts/init_spark.sh
@@ -48,7 +49,7 @@ source $HOME/desc-spark/scripts/init_spark.sh
 LIBS=$HOME/SparkLibs
 JARS=\$LIBS/jhealpix.jar,\$LIBS/spark-fits.jar,\$LIBS/spark3d.jar
 
-shifter spark-shell $SPARKOPTS --jars \$JARS --conf spark.driver.args="${sep} ${zmax}" -I hputils.scala -I Timer.scala -i autocolore.scala
+shifter spark-shell $SPARKOPTS --jars \$JARS --conf spark.driver.args="${sep} ${zmax} ${ncores}" -I hputils.scala -I Timer.scala -i autocolore.scala
 
 stop-all.sh
 
