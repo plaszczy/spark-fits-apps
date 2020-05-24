@@ -1,7 +1,11 @@
 //spark-shell --jars jhealpix.jar
-import scala.math.{log,toRadians,pow,floor}
+import scala.math.{log,toRadians,pow,floor,sin}
 
 val sepcut=10.0
+val thetacut=toRadians(sepcut/60)
+val rcut=2*sin(thetacut/2)
+val rcut2=rcut*rcut
+
 
 
 //nside
@@ -86,10 +90,15 @@ matched=matched.filter('id=!='id2)
 //matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).drop("dx","dy","dz").withColumn("r",F.degrees($"d")*60).drop("d")
 //matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.asin(F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")/2)*2).withColumn("r",F.degrees($"d")*60).drop("dx","dy","dz","d")
 
-matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.asin(F.hypot($"dx",F.hypot($"dy",$"dz"))/2)*2).withColumn("r",F.degrees($"d")*60).drop("dx","dy","dz","d")
+//matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("d",F.asin(F.hypot($"dx",F.hypot($"dy",$"dz"))/2)*2).withColumn("r",F.degrees($"d")*60).drop("dx","dy","dz","d")
+
+matched=matched.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("r2",$"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz").drop("dx","dy","dz","theta_t","theta_s","phi_s","phi_t")
+
+
 
 //cut at sepcut
-matched=matched.filter($"r"<sepcut)
+//matched=matched.filter($"r"<sepcut)
+matched=matched.filter($"r2"<rcut2).drop("r2")
 
 println("==> joining on ipix: "+matched.columns.mkString(", "))
 val nmatch=matched.cache.count()

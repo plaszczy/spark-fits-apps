@@ -111,5 +111,6 @@ print("deg.parquet written")
 #step(sepcut,nside)
 #semilogx()
 #yticks(2**(arange(8)+3)) 
+#gca().get_xaxis().get_major_formatter().labelOnlyBase = False
 #xlabel(r"$\Delta \theta\quad [arcmin]$")
 #ylabel("nside")
