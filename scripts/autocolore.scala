@@ -94,28 +94,28 @@ edges.printSchema
 timer.step
 timer.print("join")
 
-
-//only non 0 degrees
-/*
 //release mem
+
+/*
+println("waiting for deg...")
+val deg=edges.groupBy("id").count
 dup.unpersist
 
-val deg=edges.groupBy("id").count
 println(deg.cache.count)
 
 timer.step
-timer.print("groupBy")
+timer.print("join+groupBy")
+
 
 val sumDeg=deg.agg(F.sum("count")).first.getLong(0)
 val meanDeg=sumDeg.toDouble/Ns
 println(s"Degree: sum=$sumDeg avg=$meanDeg")
-
-println("|||sep,nside,zmin,zmax,Ns,nedges,sumdeg,nodes,meandeg,tmin")
-println(f"||$sepcut,$nside,$zmin,$zmax,$Ns,$nedges,$sumDeg,$meanDeg%5.3f,$nodes,$fulltime%.2f")
  */
+
+
+
 val fulltime=(timer.time-start)*1e-9/60
 println(s"TOT TIME=${fulltime} mins")
-
 
 println("<>sep,nside,zmin,zmax,Ns,nedges,nodes,bp1,np2,tmin")
 println(f"@$sepcut,$nside,$zmin,$zmax,$Ns,$nedges,$nodes,$np1,$np2,$fulltime%.2f")

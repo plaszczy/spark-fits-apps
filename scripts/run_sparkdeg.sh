@@ -6,7 +6,7 @@ nargs=$#
 if [ $nargs -lt 3 ]; then
 echo "##################################################################################"
 echo "usage: "
-echo "./run_sparkdeg.sh sep(arcmin) zmax Nodes (#iterations)"
+echo "./run_sparkdeg.sh sep zmax Nodes (#iterations)"
 echo "##################################################################################"
 exit
 fi
@@ -33,9 +33,9 @@ cat > $slfile <<EOF
 #!/bin/bash
 
 #SBATCH -q debug
+#SBATCH -t 00:10:00
 #SBATCH -N $nodes
 #SBATCH -C haswell
-#SBATCH -t 00:10:00
 #SBATCH -e slurm_${prefix}_%j.err
 #SBATCH -o slurm_${prefix}_%j.out
 #SBATCH --image=$IMG
