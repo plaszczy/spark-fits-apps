@@ -46,7 +46,12 @@ val source=input.withColumn("id",F.monotonicallyIncreasingId)
   .drop("z")
   .withColumn("theta_s",F.radians(F.lit(90)-F.col("dec")))
   .withColumn("phi_s",F.radians("ra"))
-  .withColumn("ipix",Ang2pix($"theta_s",$"phi_s")).drop("ra","dec")
+  .withColumn("ipix",Ang2pix($"theta_s",$"phi_s"))
+  .drop("ra","dec")
+  .withColumn("x_s",F.sin($"theta_s")*F.cos($"phi_s"))
+  .withColumn("y_s",F.sin($"theta_s")*F.sin($"phi_s"))
+  .withColumn("z_s",F.cos($"theta_s"))
+  .drop("theta_s","phi_s")
   .coalesce(numPart)
   .cache()
 
@@ -75,8 +80,9 @@ dups(8)=source.select(cols.head,cols.tail:_*)
 
 val dup=dups.reduceLeft(_.union(_))
   .withColumnRenamed("id","id2")
-  .withColumnRenamed("theta_s","theta_t")
-  .withColumnRenamed("phi_s","phi_t")
+  .withColumnRenamed("x_s","x_t")
+  .withColumnRenamed("y_s","y_t")
+  .withColumnRenamed("z_s","z_t")
   .cache
 
 println("*** caching duplicates: "+dup.columns.mkString(", "))
@@ -92,21 +98,16 @@ println("dup partitions="+np2)
 //PAIRS
 //join by ipix: tous les candidats paires
 val pairs=source.join(dup,"ipix").drop("ipix").filter('id=!='id2)
-//.persist(StorageLevel.MEMORY_AND_DISK)
-//println("pairs size="+pairs.count)
 
-//spherical distance
+//cut on cart distance
 val edges=pairs
-  .withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s"))
-  .withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s"))
-  .withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s"))
-  .withColumn("s",F.asin(F.sqrt($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")/2)*2)
-  .filter($"s"<thetacut)
-  .drop("dx","dy","dz","theta_t","theta_s","phi_s","phi_t","s")
-
-
-//cartesian distance
-//val edges=pairs.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("r2",($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).drop("dx","dy","dz","theta_t","theta_s","phi_s","phi_t").filter($"r2"<r2cut).drop("r2")
+  .withColumn("dx",$"x_s"-$"x_t")
+  .withColumn("dy",$"y_s"-$"y_t")
+  .withColumn("dz",$"z_s"-$"z_t")
+  .withColumn("r2",$"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")
+  .filter($"r2"<r2cut)
+  .drop("dx","dy","dz","x_t","x_s","y_s","y_t","z_s","z_t")
+//.persist(StorageLevel.MEMORY_AND_DISK)
 
 println("==> joining on ipix: "+edges.columns.mkString(", "))
 val nedges=edges.count()
