@@ -49,6 +49,8 @@ source $HOME/desc-spark/scripts/init_spark.sh
 LIBS=$HOME/SparkLibs
 JARS=\$LIBS/jhealpix.jar,\$LIBS/spark-fits.jar,\$LIBS/spark3d.jar
 
+export FITSSOURCE="/global/cscratch1/sd/plaszczy/LSST10Y"
+
 shifter spark-shell $SPARKOPTS --jars \$JARS --conf spark.driver.args="${sep} ${zmax} ${ncores}" -I hputils.scala -I Timer.scala -i autocolore.scala
 
 stop-all.sh

@@ -28,8 +28,10 @@ val nodes=System.getenv("SLURM_JOB_NUM_NODES")
 println(s"sep=$sepcut arcmin -> nside=$nside")
 println(s"readshift shell [$zmin,$zmax]")
 
+val FITS=System.getenv("FITSSOURCE")
+
 //data source
-val df_all=spark.read.format("fits").option("hdu",1).load("/global/cscratch1/sd/plaszczy/LSST10Y").select($"RA",$"DEC",$"Z_COSMO"+$"DZ_RSD" as "z")
+val df_all=spark.read.format("fits").option("hdu",1).load(FITS).select($"RA",$"DEC",$"Z_COSMO"+$"DZ_RSD" as "z")
 
 val input=df_all.filter($"z".between(zmin,zmax)).drop("z")
 
@@ -70,6 +72,7 @@ val Ndup=dup.count
 println(f"duplicates size=${Ndup/1e6}%3.2f M")
 
 timer.step
+timer.print("dup cache")
 val np2=dup.rdd.getNumPartitions
 println("dup partitions="+np2)
 
