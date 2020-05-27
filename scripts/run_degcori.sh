@@ -33,7 +33,7 @@ cat > $slfile <<EOF
 #!/bin/bash
 
 #SBATCH -q debug
-#SBATCH -t 00:10:00
+#SBATCH -t 00:05:00
 #SBATCH -N $nodes
 #SBATCH -C haswell
 #SBATCH -e slurm_${prefix}_%j.err
@@ -51,7 +51,7 @@ JARS=\$LIBS/jhealpix.jar,\$LIBS/spark-fits.jar,\$LIBS/spark3d.jar
 
 export FITSSOURCE="/global/cscratch1/sd/plaszczy/LSST10Y"
 
-shifter spark-shell $SPARKOPTS --jars \$JARS --conf spark.driver.args="${sep} ${zmax} ${ncores}" -I hputils.scala -I Timer.scala -i autocolore.scala
+shifter spark-shell $SPARKOPTS --jars \$JARS --conf spark.driver.args="${sep} ${zmax} ${ncores}" -I hputils.scala -I Timer.scala -i autocoloreXYZ.scala
 
 stop-all.sh
 
