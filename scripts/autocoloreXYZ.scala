@@ -6,7 +6,7 @@ import java.util.Locale
 import scala.math.{sin,toRadians}
 
 // spark3D implicits
-//import com.astrolabsoftware.spark3d._
+import com.astrolabsoftware.spark3d._
 
 Locale.setDefault(Locale.US)
 
@@ -52,8 +52,10 @@ val source=input.withColumn("id",F.monotonicallyIncreasingId)
   .withColumn("y_s",F.sin($"theta_s")*F.sin($"phi_s"))
   .withColumn("z_s",F.cos($"theta_s"))
   .drop("theta_s","phi_s")
+//  .repartitionByCol("ipix",preLabeled=false, numPartitions=12*nside*nside)
   .coalesce(numPart)
   .cache()
+
 
 println("*** caching source: "+source.columns.mkString(", "))
 val Ns=source.count
@@ -114,7 +116,7 @@ val nedges=edges.count()
 println(f"#pair-associations=${nedges/1e6}%3.2f M")
 edges.printSchema
 
-timer.step
+val tjoin=timer.step
 timer.print("join")
 
 //release mem
@@ -140,7 +142,7 @@ println(s"Degree: sum=$sumDeg avg=$meanDeg")
 val fulltime=(timer.time-start)*1e-9/60
 println(s"TOT TIME=${fulltime} mins")
 
-println("<>sep,nside,zmin,zmax,Ns,nedges,nodes,bp1,np2,tmin")
-println(f"@$sepcut,$nside,$zmin,$zmax,$Ns,$nedges,$nodes,$np1,$np2,$fulltime%.2f")
+println("<>sep,nside,zmin,zmax,Ns,nedges,nodes,np1,np2,tjoin,tmin")
+println(f"@$sepcut,$nside,$zmin,$zmax,$Ns,$nedges,$nodes,$np1,$np2,$tjoin%.1f,$fulltime%.2f")
 
 System.exit(0)

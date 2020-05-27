@@ -104,10 +104,6 @@ val edges=pairs
   .filter($"s"<thetacut)
   .drop("dx","dy","dz","theta_t","theta_s","phi_s","phi_t","s")
 
-
-//cartesian distance
-//val edges=pairs.withColumn("dx",F.sin($"theta_t")*F.cos($"phi_t")-F.sin($"theta_s")*F.cos($"phi_s")).withColumn("dy",F.sin($"theta_t")*F.sin($"phi_t")-F.sin($"theta_s")*F.sin($"phi_s")).withColumn("dz",F.cos($"theta_t")-F.cos($"theta_s")).withColumn("r2",($"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")).drop("dx","dy","dz","theta_t","theta_s","phi_s","phi_t").filter($"r2"<r2cut).drop("r2")
-
 println("==> joining on ipix: "+edges.columns.mkString(", "))
 val nedges=edges.count()
 println(f"#pair-associations=${nedges/1e6}%3.2f M")
@@ -139,7 +135,7 @@ println(s"Degree: sum=$sumDeg avg=$meanDeg")
 val fulltime=(timer.time-start)*1e-9/60
 println(s"TOT TIME=${fulltime} mins")
 
-println("<>sep,nside,zmin,zmax,Ns,nedges,nodes,bp1,np2,tmin")
+println("<>sep,nside,zmin,zmax,Ns,nedges,nodes,np1,np2,tmin")
 println(f"@$sepcut,$nside,$zmin,$zmax,$Ns,$nedges,$nodes,$np1,$np2,$fulltime%.2f")
 
 System.exit(0)

@@ -3,25 +3,27 @@
 declare -i nargs
 nargs=$#
 
-if [ $nargs -lt 3 ]; then
+if [ $nargs -lt 2 ]; then
 echo "##################################################################################"
 echo "usage: "
-echo "./run_sparkdeg.sh sep zmax Nodes (#iterations)"
+echo "./run_sparkdeg.sh sep Nodes (#iterations)"
 echo "##################################################################################"
 exit
 fi
 
-#optional
-declare -i nit
-nit=1
-if [ $# -eq 4 ] ; then
-nit=$4
-fi
 
 sep=$1
-zmax=$2
-nodes=$3
+nodes=$2
 ncores=$(($nodes*32))
+
+#optional
+nit=1
+if [ $# -eq 3 ] ; then
+nit=$3
+fi
+
+zmax=1.025
+
 
 export SPARKVERSION=2.4.4
 IMG=registry.services.nersc.gov/plaszczy/spark_desc:v$SPARKVERSION
@@ -33,7 +35,7 @@ cat > $slfile <<EOF
 #!/bin/bash
 
 #SBATCH -q debug
-#SBATCH -t 00:05:00
+#SBATCH -t 00:20:00
 #SBATCH -N $nodes
 #SBATCH -C haswell
 #SBATCH -e slurm_${prefix}_%j.err
