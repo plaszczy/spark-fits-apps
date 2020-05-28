@@ -6,14 +6,15 @@ import pandas as pd
 import healpy as hp
 from matplotlib import pyplot as plt
 
-nside=131072
+#nside=131072
+nside=1024
 
 pixarea=hp.nside2pixarea(nside, degrees=True)*3600
 reso= hp.nside2resol(nside,arcmin=True)
 #create the ang2pix user-defined-function. 
 @pandas_udf('long', PandasUDFType.SCALAR)
 def Ang2Pix(ra,dec):
-    return pd.Series(hp.ang2pix(nside,np.radians(90-dec),np.radians(ra)),nest=True)
+    return pd.Series(hp.ang2pix(nside,np.radians(90-dec),np.radians(ra),nest=True))
 ##################
 
 # req: ipix,tract

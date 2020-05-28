@@ -32,7 +32,7 @@ logger.LogManager.getLogger("akka").setLevel(level)
 timer=Timer()
 #
 timer.start()
-ff=os.environ['RUN2']
+ff=os.environ['RUN22']
 print("input={}".format(ff))
 df_all=spark.read.parquet(ff)
 print("#partitions={}".format(df_all.rdd.getNumPartitions()))
@@ -103,4 +103,4 @@ gold_cModel=gal.select("ipix","ra","dec","mag_i_cModel","magerr_i_cModel","psFlu
 timer.stop()
 
 #centre
-rot=[61.89355123721637,-36.006714393702175]
+cen=[61.89355123721637,-36.006714393702175]
