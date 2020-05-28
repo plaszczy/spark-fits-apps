@@ -29,31 +29,31 @@ val nodes=System.getenv("SLURM_JOB_NUM_NODES")
 println(s"sep=$sepcut arcmin -> nside=$nside")
 println(s"readshift shell [$zmin,$zmax]")
 
-val FITS=System.getenv("FITSSOURCE")
-
-//data source
-val df_all=spark.read.format("fits").option("hdu",1).load(FITS).select($"RA",$"DEC",$"Z_COSMO"+$"DZ_RSD" as "z")
+//input
+/*
+//fits+cut
+val df_all=spark.read.format("fits").option("hdu",1).load(System.getenv("FITSSOURCE")).select($"RA",$"DEC",$"Z_COSMO"+$"DZ_RSD" as "z")
 
 val input=df_all.filter($"z".between(zmin,zmax)).drop("z")
-
+ */
+//parquet
+val input=spark.read.parquet(System.getenv("INPUT")).drop("ipix","z")
 
 val timer=new Timer
 val start=timer.time
 
-//SOURCE
 //add id+ipix
 val source=input.withColumn("id",F.monotonicallyIncreasingId)
-  .drop("z")
-  .withColumn("theta_s",F.radians(F.lit(90)-F.col("dec")))
-  .withColumn("phi_s",F.radians("ra"))
+  .withColumn("theta_s",F.radians(F.lit(90)-F.col("DEC")))
+  .withColumn("phi_s",F.radians("RA"))
   .withColumn("ipix",Ang2pix($"theta_s",$"phi_s"))
-  .drop("ra","dec")
+  .drop("RA","DEC")
   .withColumn("x_s",F.sin($"theta_s")*F.cos($"phi_s"))
   .withColumn("y_s",F.sin($"theta_s")*F.sin($"phi_s"))
   .withColumn("z_s",F.cos($"theta_s"))
   .drop("theta_s","phi_s")
 //  .repartitionByCol("ipix",preLabeled=false, numPartitions=12*nside*nside)
-  .coalesce(numPart)
+//  .coalesce(numPart)
   .cache()
 
 
@@ -108,7 +108,7 @@ val edges=pairs
   .withColumn("dz",$"z_s"-$"z_t")
   .withColumn("r2",$"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")
   .filter($"r2"<r2cut)
-  .drop("dx","dy","dz","x_t","x_s","y_s","y_t","z_s","z_t")
+  .drop("dx","dy","dz","x_t","x_s","y_s","y_t","z_s","z_t","r2")
 //.persist(StorageLevel.MEMORY_AND_DISK)
 
 println("==> joining on ipix: "+edges.columns.mkString(", "))
@@ -119,25 +119,21 @@ edges.printSchema
 val tjoin=timer.step
 timer.print("join")
 
-//release mem
-
 /*
-println("waiting for deg...")
 val deg=edges.groupBy("id").count
 dup.unpersist
 
+println("waiting for deg...")
 println(deg.cache.count)
 
-timer.step
+val tjoin=timer.step
 timer.print("join+groupBy")
-
 
 val sumDeg=deg.agg(F.sum("count")).first.getLong(0)
 val meanDeg=sumDeg.toDouble/Ns
 println(s"Degree: sum=$sumDeg avg=$meanDeg")
+val nedges=sumDeg
  */
-
-
 
 val fulltime=(timer.time-start)*1e-9/60
 println(s"TOT TIME=${fulltime} mins")

@@ -14,7 +14,7 @@ fi
 
 sep=$1
 nodes=$2
-ncores=$(($nodes*32))
+part=$(($nodes*32))
 
 #optional
 nit=1
@@ -35,7 +35,7 @@ cat > $slfile <<EOF
 #!/bin/bash
 
 #SBATCH -q debug
-#SBATCH -t 00:20:00
+#SBATCH -t 00:05:00
 #SBATCH -N $nodes
 #SBATCH -C haswell
 #SBATCH -e slurm_${prefix}_%j.err
@@ -51,9 +51,11 @@ source $HOME/desc-spark/scripts/init_spark.sh
 LIBS=$HOME/SparkLibs
 JARS=\$LIBS/jhealpix.jar,\$LIBS/spark-fits.jar,\$LIBS/spark3d.jar
 
-export FITSSOURCE="/global/cscratch1/sd/plaszczy/LSST10Y"
+#export FITSSOURCE="/global/cscratch1/sd/plaszczy/LSST10Y"
+export INPUT="/global/cscratch1/sd/plaszczy/tomo100M.parquet"
 
-shifter spark-shell $SPARKOPTS --jars \$JARS --conf spark.driver.args="${sep} ${zmax} ${ncores}" -I hputils.scala -I Timer.scala -i autocoloreXYZ.scala
+#pas de coalesce
+shifter spark-shell $SPARKOPTS --jars \$JARS --conf spark.driver.args="${sep} ${zmax} ${part}" -I hputils.scala -I Timer.scala -i autocoloreXYZ.scala
 
 stop-all.sh
 
