@@ -5,7 +5,7 @@ import org.apache.spark.storage.StorageLevel
 import org.apache.spark.sql.types._
 
 import java.util.Locale
-import scala.math.{sin,toRadians}
+import scala.math.{sin,toRadians,log}
 
 // spark3D implicits
 import com.astrolabsoftware.spark3d._
@@ -19,6 +19,12 @@ val sepcut:Double=args(0).toDouble
 val thetacut:Double=toRadians(sepcut/60)
 val rcut:Double=2*sin(thetacut/2)
 val r2cut:Double=rcut*rcut
+
+val sep0:Double = 2.5
+val r0=2*sin(toRadians(sep0/60)/2)
+val r02=r0*r0
+val lr0=log(r0)
+val binSize:Double = 0.24236578127764186
 
 val zmin:Double=1.0
 val zmax:Double=args(1).toDouble
@@ -103,19 +109,17 @@ println("dup partitions="+np2)
 //join by ipix: tous les candidats paires
 val pairs=source.join(dup,"ipix").drop("ipix").filter('id=!='id2)
 
-val lr0:Double=0.91629071
-val lstep:Double=0.3153402
 //cut on cart distance+bin
 val edges=pairs
   .withColumn("dx",$"x_s"-$"x_t")
   .withColumn("dy",$"y_s"-$"y_t")
   .withColumn("dz",$"z_s"-$"z_t")
   .withColumn("r2",$"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")
-  .filter($"r2"<r2cut)
-  .withColumn($"logr",F.log($"r2")/2.0)
-  .withColumn($"ibin",(($"logr"-lr0)/lstep).cast(IntegerType))
-  .drop("dx","dy","dz","x_t","x_s","y_s","y_t","z_s","z_t","r2","logr")
-//.persist(StorageLevel.MEMORY_AND_DISK)
+  .filter(F.col("r2").between(r02,r2cut))
+  .withColumn("logr",F.log($"r2")/2.0)
+  .withColumn("ibin",(($"logr"-lr0)/binSize).cast(IntegerType))
+  .drop("dx","dy","dz","x_t","x_s","y_s","y_t","z_s","z_t","r2","logr","id","id2")
+//  .persist(StorageLevel.MEMORY_AND_DISK)
 
 edges.printSchema
 
@@ -144,7 +148,7 @@ val nedges=sumDeg
 
 
 //binning
-val binned=edges.groupBy("ibin").count()
+val binned=edges.groupBy("ibin").count().sort("ibin")
 binned.show
 
 timer.step
