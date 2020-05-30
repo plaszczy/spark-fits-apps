@@ -2,6 +2,8 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.{functions=>F}
 import org.apache.spark.sql.Row
 import org.apache.spark.storage.StorageLevel
+import org.apache.spark.sql.types._
+
 import java.util.Locale
 import scala.math.{sin,toRadians}
 
@@ -101,20 +103,25 @@ println("dup partitions="+np2)
 //join by ipix: tous les candidats paires
 val pairs=source.join(dup,"ipix").drop("ipix").filter('id=!='id2)
 
-//cut on cart distance
+val lr0:Double=0.91629071
+val lstep:Double=0.3153402
+//cut on cart distance+bin
 val edges=pairs
   .withColumn("dx",$"x_s"-$"x_t")
   .withColumn("dy",$"y_s"-$"y_t")
   .withColumn("dz",$"z_s"-$"z_t")
   .withColumn("r2",$"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")
   .filter($"r2"<r2cut)
-  .drop("dx","dy","dz","x_t","x_s","y_s","y_t","z_s","z_t","r2")
+  .withColumn($"logr",F.log($"r2")/2.0)
+  .withColumn($"ibin",(($"logr"-lr0)/lstep).cast(IntegerType))
+  .drop("dx","dy","dz","x_t","x_s","y_s","y_t","z_s","z_t","r2","logr")
 //.persist(StorageLevel.MEMORY_AND_DISK)
+
+edges.printSchema
 
 println("==> joining on ipix: "+edges.columns.mkString(", "))
 val nedges=edges.count()
-println(f"#pair-associations=${nedges/1e6}%3.2f M")
-edges.printSchema
+println(f"#edges=${nedges/1e6}%3.2f M")
 
 val tjoin=timer.step
 timer.print("join")
@@ -134,6 +141,15 @@ val meanDeg=sumDeg.toDouble/Ns
 println(s"Degree: sum=$sumDeg avg=$meanDeg")
 val nedges=sumDeg
  */
+
+
+//binning
+val binned=edges.groupBy("ibin").count()
+binned.show
+
+timer.step
+timer.print("binning")
+
 
 val fulltime=(timer.time-start)*1e-9/60
 println(s"TOT TIME=${fulltime} mins")
