@@ -3,10 +3,10 @@
 declare -i nargs
 nargs=$#
 
-if [ $nargs -lt 2 ]; then
+if [ $nargs -lt 1 ]; then
 echo "##################################################################################"
 echo "usage: "
-echo "./run_sparkdeg.sh sep zmax "
+echo "./run_sparkdeg.sh sep "
 echo "##################################################################################"
 exit
 fi
@@ -14,7 +14,7 @@ fi
 #optional
 
 sep=$1
-zmax=$2
+zmax=1.025
 
 if [ -z "${ncores_tot}" ] ; then
 echo "sparkopts!"
@@ -23,7 +23,7 @@ fi
 part=$((${ncores_tot}*3))
 
 
-export FITSSOURCE="/lsst/LSST1Y"
+export INPUT="/lsst/tomo10M.parquet"
 export SLURM_JOB_NUM_NODES=${n_executors}
 
 spark-shell $SPARKOPTS --jars $JARS --conf spark.driver.args="${sep} ${zmax} ${part}" -I hputils.scala -I Timer.scala -i autocoloreXYZ.scala

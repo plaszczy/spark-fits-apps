@@ -51,7 +51,7 @@ df=df_all.filter((df_all.good==1)&(df_all.clean==1))
 cols="ra,dec,extendedness,blendedness"
 for b in ['i']:
 #for b in ['u','g','r','i','z','y']:
-    s=",psFlux_flag_{0},psFlux_{0},psFluxErr_{0},mag_{0},mag_{0}_cModel,magerr_{0}_cModel,snr_{0}_cModel".format(b)
+    s=",psFlux_flag_{0},psFlux_{0},psFluxErr_{0},mag_{0},mag_{0}_cModel,magerr_{0}_cModel,snr_{0}_cModel,psf_fwhm_{0}".format(b)
     cols+=s
 print(cols)
 
@@ -83,21 +83,14 @@ gal=gal.cache()
 print("tot size={} M".format(gal.count()/1e6))
 #print("i size={} M, i<24={}".format(i.count()/1e6,i24.count()/1e6))
 
+galqual=gal.filter( (gal.blendedness<10**(-0.375)) & (gal.snr_i_cModel>5))
 
-#subsamples
-
-#i<24
-#band="i"
-#cols="ipix,blendedness,psFlux_{0},psFluxErr_{0},mag_{0}_cModel,magerr_{0}_cModel,snr_{0}_cModel".format(band)
-#i=gal.filter(df["psFlux_flag_{}".format(band)]==False).select(cols.split(",")).na.drop()
-#iqual=i.filter((i['blendedness']<10**(-0.375)) & (i['snr_i_cModel']>5))
-#i24=iqual.filter(iqual.mag_i_cModel<24)
+#then  cut on mag_cModel
 
 
 #gold
-gold=gal.select("ipix","ra","dec","mag_i","psFlux_i","psFluxErr_i",'psf_fwhm_i','IxxPSF_i','IxyPSF_i','IyyPSF_i').na.drop().filter("mag_i<25.3")
-gold_cModel=gal.select("ipix","ra","dec","mag_i_cModel","magerr_i_cModel","psFlux_i","psFluxErr_i",'psf_fwhm_i','IxxPSF_i','IxyPSF_i','IyyPSF_i').na.drop().filter("mag_i_cModel<25.3")
-
+gold=gal.select("ipix","ra","dec","mag_i","psFlux_i","psFluxErr_i",'psf_fwhm_i').na.drop().filter("mag_i<25.3")
+gold_cModel=gal.select("ipix","ra","dec","mag_i_cModel","magerr_i_cModel","psFlux_i","psFluxErr_i",'psf_fwhm_i').na.drop().filter("mag_i_cModel<25.3")
 
 
 timer.stop()

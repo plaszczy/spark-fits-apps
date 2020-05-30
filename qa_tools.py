@@ -8,13 +8,14 @@ from matplotlib import pyplot as plt
 
 #nside=131072
 nside=1024
+nest=False
 
 pixarea=hp.nside2pixarea(nside, degrees=True)*3600
 reso= hp.nside2resol(nside,arcmin=True)
 #create the ang2pix user-defined-function. 
 @pandas_udf('long', PandasUDFType.SCALAR)
 def Ang2Pix(ra,dec):
-    return pd.Series(hp.ang2pix(nside,np.radians(90-dec),np.radians(ra),nest=True))
+    return pd.Series(hp.ang2pix(nside,np.radians(90-dec),np.radians(ra),nest=nest))
 ##################
 
 # req: ipix,tract
@@ -93,7 +94,7 @@ def projmap_mean(df,col,minmax=None,dohist=True,**kwargs ):
         plt.hist(map_p[var].values,bins=80,range=minmax)
         plt.xlabel(var)
 
-    hp.gnomview(skyMap,reso=reso,min=minmax[0],max=minmax[1],title=var,**kwargs )
+    hp.gnomview(skyMap,reso=reso,min=minmax[0],max=minmax[1],nest=nest,title=var,**kwargs )
     plt.show()
     return skyMap
 
@@ -120,7 +121,7 @@ def projmap_max(df,col,minmax=None,dohist=True,**kwargs ):
         plt.hist(map_p[var].values,bins=80,range=minmax)
         plt.xlabel(var)
 
-    hp.gnomview(skyMap,reso=reso,min=minmax[0],max=minmax[1],title=var,**kwargs )
+    hp.gnomview(skyMap,nest=nest,reso=reso,min=minmax[0],max=minmax[1],title=var,**kwargs )
     plt.show()
     return skyMap
 
@@ -147,7 +148,7 @@ def projmap_median_udf(df,col,minmax=None,**kwargs ):
     
     if minmax==None:
         minmax=(np.max([0,mu-2*sig]),mu+2*sig)
-    hp.gnomview(skyMap,reso=reso,min=minmax[0],max=minmax[1],title=var,**kwargs )
+    hp.gnomview(skyMap,nest=nest,reso=reso,min=minmax[0],max=minmax[1],title=var,**kwargs )
     plt.show()
     return skyMap
 
@@ -167,7 +168,7 @@ def projmap_median(df,col,minmax=None,**kwargs ):
     print("N={} \nmean={} \nsigma={}\nmin={}\nmax={}".format(val.size,mu,sig,min(val),max(val)))
     skyMap= np.full(hp.nside2npix(nside),hp.UNSEEN)
     skyMap[map_p._1.values]=val
-    hp.gnomview(skyMap,reso=reso,min=minmax[0],max=minmax[1],title="median("+col+")",**kwargs)
+    hp.gnomview(skyMap,nest=nest,reso=reso,min=minmax[0],max=minmax[1],title="median("+col+")",**kwargs)
     plt.show()
     return skyMap
 
@@ -196,7 +197,7 @@ def countsmap(df,minmax=None,**kwargs):
     
     if minmax==None:
         minmax=(np.max([0,mu-2*sig]),mu+2*sig)
-    hp.gnomview(skyMap,reso=reso,min=minmax[0],max=minmax[1],title="density/pixel (nside={})".format(nside),**kwargs)
+    hp.gnomview(skyMap,nest=nest,reso=reso,min=minmax[0],max=minmax[1],title="density/pixel (nside={})".format(nside),**kwargs)
     plt.show()
     return skyMap
 
@@ -224,7 +225,7 @@ def densitymap(df,minmax=None,**kwargs):
     
     if minmax==None:
         minmax=(np.max([0,mu-2*sig]),mu+2*sig)
-    hp.gnomview(skyMap,reso=reso,min=minmax[0],max=minmax[1],title=r"$density/arcmin^2$",**kwargs)
+    hp.gnomview(skyMap,nest=nest,reso=reso,min=minmax[0],max=minmax[1],title=r"$density/arcmin^2$",**kwargs)
     plt.show()
     return skyMap
 
