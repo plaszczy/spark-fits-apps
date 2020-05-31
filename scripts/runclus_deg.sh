@@ -26,4 +26,4 @@ part=$((${ncores_tot}*3))
 export INPUT="/lsst/tomo10M.parquet"
 export SLURM_JOB_NUM_NODES=${n_executors}
 
-spark-shell $SPARKOPTS --jars $JARS --conf spark.driver.args="${sep} ${zmax} ${part}" -I hputils.scala -I Timer.scala -i autocoloreXYZ.scala
+spark-shell $SPARKOPTS --jars $JARS --conf spark.driver.args="${sep} ${zmax} ${part}" -I hpgrid.scala -I Timer.scala -i autocoloreXYZ.scala

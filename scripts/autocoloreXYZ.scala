@@ -1,3 +1,5 @@
+//spark-shell --jars jhealpix.jar -i hpgrid.scala -i Timer.scala
+
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.{functions=>F}
 import org.apache.spark.sql.Row
@@ -5,14 +7,14 @@ import org.apache.spark.storage.StorageLevel
 import org.apache.spark.sql.types._
 
 import java.util.Locale
-import scala.math.{sin,toRadians,log}
+import scala.math.{sin,toRadians,log,pow,floor}
 
 // spark3D implicits
 import com.astrolabsoftware.spark3d._
 
 Locale.setDefault(Locale.US)
 
-//args from --conf spark.driver.args="10"
+//args from --conf spark.driver.args="sepcut zmax numpart"
 //compute nside from sep=args(0)
 val args = sc.getConf.get("spark.driver.args").split("\\s+")
 val sepcut:Double=args(0).toDouble
@@ -33,9 +35,17 @@ val numPart:Int=args(2).toInt
 
 val nodes=System.getenv("SLURM_JOB_NUM_NODES")
 
-
 println(s"sep=$sepcut arcmin -> nside=$nside")
 println(s"readshift shell [$zmin,$zmax]")
+
+
+//healpix
+val i=floor(-log(thetacut)/log(2.0)).toInt
+val nside=pow(2,i-1).toInt
+val grid = HealpixGrid(new HealpixBase(nside, NESTED), new ExtPointing)
+def Ang2pix=spark.udf.register("Ang2pix",(theta:Double,phi:Double)=>grid.index(theta,phi))
+def pix_neighbours=spark.udf.register("pix_neighbours",(ipix:Long)=>grid.neighbours(ipix))
+
 
 //input
 /*

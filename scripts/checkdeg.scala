@@ -24,8 +24,8 @@ val nside=pow(2,i-1).toInt
 
 //healpix
 val grid = HealpixGrid(new HealpixBase(nside, NESTED), new ExtPointing)
-val Ang2pix=spark.udf.register("Ang2pix",(theta:Double,phi:Double)=>grid.index(theta,phi))
-val pix_neighbours=spark.udf.register("pix_neighbours",(ipix:Long)=>grid.neighbours(ipix))
+def Ang2pix=spark.udf.register("Ang2pix",(theta:Double,phi:Double)=>grid.index(theta,phi))
+def pix_neighbours=spark.udf.register("pix_neighbours",(ipix:Long)=>grid.neighbours(ipix))
 
 
 val timer=new Timer
