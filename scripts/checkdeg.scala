@@ -1,4 +1,14 @@
-//spark-shell --jars jhealpix.jar
+//spark-shell --jars jhealpix.jar -i hpgrid.scala -i Timer.scala
+//:load hpgrid.scala
+
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{functions=>F}
+import org.apache.spark.sql.Row
+
+
+import org.apache.spark.sql.functions.udf
+import org.apache.spark.sql.types._
+
 import scala.math.{log,toRadians,pow,floor,sin}
 
 val sepcut=10.0
@@ -7,13 +17,15 @@ val rcut=2*sin(thetacut/2)
 val rcut2=rcut*rcut
 
 
-
 //nside
 val L=toRadians(sepcut/60)
 val i=floor(-log(L)/log(2.0)).toInt
 val nside=pow(2,i-1).toInt
 
-:load cross-tools.scala
+//healpix
+val grid = HealpixGrid(new HealpixBase(nside, NESTED), new ExtPointing)
+val Ang2pix=spark.udf.register("Ang2pix",(theta:Double,phi:Double)=>grid.index(theta,phi))
+val pix_neighbours=spark.udf.register("pix_neighbours",(ipix:Long)=>grid.neighbours(ipix))
 
 
 val timer=new Timer
