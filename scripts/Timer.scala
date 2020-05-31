@@ -1,7 +1,7 @@
 
 
 //Timer
-class Timer (var t0:Double=System.nanoTime().toDouble,   var dt:Double=0)  {
+class Timer (var t0:Double=System.nanoTime().toDouble,   var dt:Double=0)  extends Serializable  {
 
   def time:Double=System.nanoTime().toDouble
 

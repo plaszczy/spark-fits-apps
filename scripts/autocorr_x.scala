@@ -1,4 +1,4 @@
-//spark-shell --jars jhealpix.jar -i hpgrid.scala -i Timer.scala
+//spark-shell --jars jhealpix.jar -I hpgrid.scala -I Timer.scala
 
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.{functions=>F}
@@ -15,7 +15,6 @@ import com.astrolabsoftware.spark3d._
 Locale.setDefault(Locale.US)
 
 //args from --conf spark.driver.args="sepcut zmax numpart"
-//compute nside from sep=args(0)
 val args = sc.getConf.get("spark.driver.args").split("\\s+")
 val sepcut:Double=args(0).toDouble
 val thetacut:Double=toRadians(sepcut/60)
@@ -35,8 +34,7 @@ val numPart:Int=args(2).toInt
 
 val nodes=System.getenv("SLURM_JOB_NUM_NODES")
 
-println(s"sep=$sepcut arcmin -> nside=$nside")
-println(s"readshift shell [$zmin,$zmax]")
+//println(s"readshift shell [$zmin,$zmax]")
 
 
 //healpix
@@ -46,6 +44,7 @@ val grid = HealpixGrid(new HealpixBase(nside, NESTED), new ExtPointing)
 def Ang2pix=spark.udf.register("Ang2pix",(theta:Double,phi:Double)=>grid.index(theta,phi))
 def pix_neighbours=spark.udf.register("pix_neighbours",(ipix:Long)=>grid.neighbours(ipix))
 
+println(s"sep=$sepcut arcmin -> nside=$nside")
 
 //input
 /*
@@ -60,6 +59,7 @@ val input=spark.read.parquet(System.getenv("INPUT")).drop("ipix","z")
 val timer=new Timer
 val start=timer.time
 
+import spark.implicits._
 //add id+ipix
 val source=input.withColumn("id",F.monotonicallyIncreasingId)
   .withColumn("theta_s",F.radians(F.lit(90)-F.col("DEC")))
