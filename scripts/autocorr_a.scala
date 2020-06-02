@@ -133,7 +133,7 @@ println("dup partitions="+np2)
 
 ///////////////////////////////////////////
 //3 build PAIRS with cuts
-val pairs=source.join(dup,"ipix").drop("ipix").filter('id=!='id2).drop("id","id2")
+val pairs=source.join(dup,"ipix").drop("ipix").filter('id>'id2).drop("id","id2")
 
 //cut on cart distance+bin
 val edges=pairs
@@ -158,7 +158,7 @@ println("edges numParts="+np3)
 println("==> joining with nside2="+nside2+" output="+edges.columns.mkString(", "))
 //val nedges=edges.count()
 val nedges=0.0
-println(f"#edges=${nedges/1e6}%3.2f M")
+//println(f"#edges=${nedges/1e6}%3.2f M")
 
 val tjoin=timer.step
 timer.print("join")
@@ -172,6 +172,7 @@ val binned=edges.groupBy("ibin").agg(F.sum($"prod") as "Nbin").sort("ibin")
 
 binned.show
 
+//binned.agg(F.sum($"Nbin")).show
 //joli output
 val binning=sc.parallelize(bins.zipWithIndex).toDF("interval","ibin").withColumn("width",$"interval"(1)-$"interval"(0)).select("ibin","interval","width")
 binning.show
