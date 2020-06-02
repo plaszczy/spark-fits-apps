@@ -19,9 +19,9 @@ val args = sc.getConf.get("spark.driver.args").split("\\s+")
 
 val binSize:Double = args(0).toDouble
 val nside1:Int= args(1).toInt
-
 val Nbins:Int= args(2).toInt
 val nside2:Int= args(3).toInt
+val numPart:Int=args(4).toInt
 
 //en arcmin
 val t=List.tabulate(Nbins+1)(i=>2.5+i*binSize)
@@ -86,6 +86,7 @@ val source=newinput.withColumn("id",F.monotonicallyIncreasingId)
   .withColumn("y_s",F.sin($"theta_s")*F.sin($"phi_s"))
   .withColumn("z_s",F.cos($"theta_s"))
   .drop("theta_s","phi_s")
+//  .repartition(numPart,$"ipix")
   .cache()
 
 
@@ -147,12 +148,16 @@ val edges=pairs
   .drop("r2","r")
   .withColumn("prod",$"w"*$"w2")
   .drop("w","w2")
+//  .repartition(numPart)
 //  .persist(StorageLevel.MEMORY_AND_DISK)
 
 edges.printSchema
+val np3=edges.rdd.getNumPartitions
+println("edges numParts="+np3)
 
-println("==> joining using nside2="+nside2+edges.columns.mkString(", "))
-val nedges=edges.count()
+println("==> joining with nside2="+nside2+" output="+edges.columns.mkString(", "))
+//val nedges=edges.count()
+val nedges=0.0
 println(f"#edges=${nedges/1e6}%3.2f M")
 
 val tjoin=timer.step
@@ -160,10 +165,16 @@ timer.print("join")
 
 ///////////////////////////////////
 //4 binning
-//val bins=edges.groupBy("ibin").agg(F.sum($"w"*$"w2") as "Nbin")
-val binned=edges.rdd.map(r=>(r.getInt(0),r.getLong(1))).reduceByKey(_+_).toDF("ibin","Nbin")
+
+val binned=edges.groupBy("ibin").agg(F.sum($"prod") as "Nbin").sort("ibin")
+
+//val binned=edges.rdd.map(r=>(r.getInt(0),r.getLong(1))).reduceByKey(_+_).toDF("ibin","Nbin")
 
 binned.show
+
+//joli output
+val binning=sc.parallelize(bins.zipWithIndex).toDF("interval","ibin").withColumn("width",$"interval"(1)-$"interval"(0)).select("ibin","interval","width")
+binning.show
 
 val tbin=timer.step
 timer.print("binning")
@@ -175,9 +186,9 @@ println(s"TOT TIME=${fulltime} mins")
 val nodes=System.getenv("SLURM_JOB_NUM_NODES")
 
 
-println("step,tmin,tmax,nside1,nside2,Ns,nedges,tmin")
-println(f"@$binSize,tmin,tmax,$nside1,$nside2,$Ns,$nedges,$fulltime%.2f")
-println(f"@#nodes=$nodes parts=($np1,$np2): source=${tsource.toInt}s dups=${tdup.toInt}s join=${tjoin.toInt}s bins=${tbin.toInt}, tot=$fulltime%.2f mins")
+println("binW,start,end,nside1,nside2,Ns,nedges,tmin")
+println(f"@$binSize,$tmin,$tmax,$nside1,$nside2,$Ns,$nedges,$fulltime%.2f")
+println(f"@nodes=$nodes parts=($np1,$np2,$np3): source=${tsource.toInt}s dups=${tdup.toInt}s join=${tjoin.toInt}s bins=${tbin.toInt}, tot=$fulltime%.2f mins")
 
 
 System.exit(0)
