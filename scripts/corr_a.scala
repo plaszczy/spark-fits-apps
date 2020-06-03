@@ -29,6 +29,10 @@ val bins=t.sliding(2).toList
 val tmin=t.head
 val tmax=t.last
 
+val binning=sc.parallelize(bins.zipWithIndex).toDF("interval","ibin").withColumn("width",$"interval"(1)-$"interval"(0)).select("ibin","interval","width")
+binning.cache.count
+binning.show
+
 //in rads
 val r=t.map(x=>toRadians(x/60))
 
@@ -68,7 +72,7 @@ val pixmap=input.withColumn("theta",F.radians(F.lit(90)-F.col("DEC"))).withColum
 
 val newinput=pixmap.withColumnRenamed("count","w")
   .withColumn("ptg",Pix2Ang1024($"bigpix"))
-  .select($"ptg"(0) as "theta_s",$"ptg"(1) as "phi_s",$"w")
+  .select($"bigpix",$"ptg"(0) as "theta_s",$"ptg"(1) as "phi_s",$"w")
 
 //println("Reduced data size="+newinput.count)
 // automatic
@@ -80,7 +84,8 @@ def Ang2pix=spark.udf.register("Ang2pix",(theta:Double,phi:Double)=>grid.index(t
 def pix_neighbours=spark.udf.register("pix_neighbours",(ipix:Long)=>grid.neighbours(ipix))
 
 
-val source=newinput.withColumn("id",F.monotonicallyIncreasingId)
+val source=newinput
+  //.withColumn("id",F.monotonicallyIncreasingId)
   .withColumn("ipix",Ang2pix($"theta_s",$"phi_s"))
   .withColumn("x_s",F.sin($"theta_s")*F.cos($"phi_s"))
   .withColumn("y_s",F.sin($"theta_s")*F.sin($"phi_s"))
@@ -116,7 +121,7 @@ dups(8)=source.select(cols.head,cols.tail:_*)
 
 val dup=dups.reduceLeft(_.union(_))
   .withColumnRenamed("w","w2")
-  .withColumnRenamed("id","id2")
+  .withColumnRenamed("bigpix","bigpix2")
   .withColumnRenamed("x_s","x_t")
   .withColumnRenamed("y_s","y_t")
   .withColumnRenamed("z_s","z_t")
@@ -133,7 +138,7 @@ println("dup partitions="+np2)
 
 ///////////////////////////////////////////
 //3 build PAIRS with cuts
-val pairs=source.join(dup,"ipix").drop("ipix").filter('id>'id2).drop("id","id2")
+val pairs=source.join(dup,"ipix").drop("ipix").filter($"bigpix"=!=$"bigpix2").drop($"bigpix2")
 
 //cut on cart distance+bin
 val edges=pairs
@@ -155,7 +160,7 @@ edges.printSchema
 val np3=edges.rdd.getNumPartitions
 println("edges numParts="+np3)
 
-println("==> joining with nside2="+nside2+" output="+edges.columns.mkString(", "))
+println("==> joining with nside2="+nside2+": output="+edges.columns.mkString(", "))
 //val nedges=edges.count()
 val nedges=0.0
 //println(f"#edges=${nedges/1e6}%3.2f M")
@@ -166,16 +171,14 @@ timer.print("join")
 ///////////////////////////////////
 //4 binning
 
-val binned=edges.groupBy("ibin").agg(F.sum($"prod") as "Nbin").sort("ibin")
+val binned=edges.groupBy("ibin").agg(F.sum($"prod") as "Nbin").sort("ibin").cache
 
 //val binned=edges.rdd.map(r=>(r.getInt(0),r.getLong(1))).reduceByKey(_+_).toDF("ibin","Nbin")
-
-binned.show
+binning.join(binned,"ibin").show
+//binned.show
 
 //binned.agg(F.sum($"Nbin")).show
 //joli output
-val binning=sc.parallelize(bins.zipWithIndex).toDF("interval","ibin").withColumn("width",$"interval"(1)-$"interval"(0)).select("ibin","interval","width")
-binning.show
 
 val tbin=timer.step
 timer.print("binning")
