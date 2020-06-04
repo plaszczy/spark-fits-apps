@@ -3,10 +3,12 @@
 declare -i nargs
 nargs=$#
 
+#./runclus_a.sh 50 256 5 8
+
 if [ $nargs -lt 4 ]; then
 echo "##################################################################################"
 echo "usage: "
-echo "./run_sparkdeg.sh binWidth nside1 Nbins nside2"
+echo "./${0##*/} binWidth nside1 Nbins nside2"
 echo "##################################################################################"
 exit
 fi

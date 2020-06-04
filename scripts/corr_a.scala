@@ -58,20 +58,38 @@ val input=spark.read.parquet(System.getenv("INPUT")).drop("ipix","z")
 val timer=new Timer
 val start=timer.time
 
-println("reducing data")
+println("reducing data with nside1="+nside1)
 
 val finegrid = HealpixGrid(new HealpixBase(nside1, NESTED), new ExtPointing)
-val Ang2Pix1024=spark.udf.register("Ang2Pix1024",(theta:Double,phi:Double)=>finegrid.index(theta,phi))
-val Pix2Ang1024=spark.udf.register("Pix2Ang1024",(ipix:Long)=> finegrid.pix2ang(ipix))
+val Ang2Pixfine=spark.udf.register("Ang2Pixfine",(theta:Double,phi:Double)=>finegrid.index(theta,phi))
+val Pix2Angfine=spark.udf.register("Pix2Angfine",(ipix:Long)=> finegrid.pix2ang(ipix))
 
 
 import spark.implicits._
 /////////////////////////////////////////
 //1 reduce data
-val pixmap=input.withColumn("theta",F.radians(F.lit(90)-F.col("DEC"))).withColumn("phi",F.radians("RA")).withColumn("bigpix",Ang2Pix1024($"theta",$"phi")).groupBy("bigpix").count()
 
+//add bigpix index
+val input1=input
+  .withColumn("theta",F.radians(F.lit(90)-F.col("DEC")))
+  .withColumn("phi",F.radians("RA"))
+  .withColumn("bigpix",Ang2Pixfine($"theta",$"phi"))
+  .drop("RA","DEC")
+  .withColumn("x",F.sin($"theta")*F.cos($"phi"))
+  .withColumn("y",F.sin($"theta")*F.sin($"phi"))
+  .withColumn("z",F.cos($"theta"))
+  .drop("theta","phi")
+  .cache
+
+val Nin=input1.count
+println(f"input size=${Nin/1e6}%3.2f M")
+
+//reduce to wighted pixmap. id is bigpix number
+val pixmap=input1.groupBy("bigpix").count()
+
+//postions are pixel centers
 val newinput=pixmap.withColumnRenamed("count","w")
-  .withColumn("ptg",Pix2Ang1024($"bigpix"))
+  .withColumn("ptg",Pix2Angfine($"bigpix"))
   .select($"bigpix",$"ptg"(0) as "theta_s",$"ptg"(1) as "phi_s",$"w")
 
 //println("Reduced data size="+newinput.count)
@@ -97,13 +115,13 @@ val source=newinput
 
 println("*** caching source: "+source.columns.mkString(", "))
 val Ns=source.count
-println(f"Source size=${Ns/1e6}%3.2f M")
+println(f"reduced size=${Ns/1e6}%3.2f M")
 val tsource=timer.step
 timer.print("source cache")
 
 val np1=source.rdd.getNumPartitions
 println("source partitions="+np1)
-
+source.show(5)
 //////////////////////////////////////////////
 //2 build duplicates
 val dfn=source.withColumn("neighbours",pix_neighbours($"ipix"))
@@ -135,35 +153,54 @@ val tdup=timer.step
 timer.print("dup cache")
 val np2=dup.rdd.getNumPartitions
 println("dup partitions="+np2)
-
+dup.show(5)
 ///////////////////////////////////////////
 //3 build PAIRS with cuts
-val pairs=source.join(dup,"ipix").drop("ipix").filter($"bigpix"=!=$"bigpix2").drop($"bigpix2")
+/*
+val pairs=source.join(dup,"ipix")
+  .drop("ipix")
+  .filter($"bigpix"<"bigpix2")
+  //.drop("bigpix2")
+ */
+val pairs=source.join(dup,"ipix")
+	.drop("ipix")
+	.filter($"bigpix"<$"bigpix2")
+	.drop("bigpix","bigpix2")
+
+println("pairs:")
+pairs.printSchema
+
+//println("#pairs="+pairs.count)
+
+
 
 //cut on cart distance+bin
 val edges=pairs
-  .withColumn("dx",$"x_s"-$"x_t")
-  .withColumn("dy",$"y_s"-$"y_t")
-  .withColumn("dz",$"z_s"-$"z_t")
-  .withColumn("r2",$"dx"*$"dx"+$"dy"*$"dy"+$"dz"*$"dz")
+  .withColumn("dxc",$"x_s"-$"x_t")
+  .withColumn("dyc",$"y_s"-$"y_t")
+  .withColumn("dzc",$"z_s"-$"z_t")
+  .withColumn("r2",$"dxc"*$"dxc"+$"dyc"*$"dyc"+$"dzc"*$"dzc")
   .filter(F.col("r2").between(r2min,r2max))
-  .drop("dx","dy","dz","x_t","x_s","y_s","y_t","z_s","z_t")
+  .drop("dxc","dyc","dzc","x_t","x_s","y_s","y_t","z_s","z_t")
   .withColumn("r",F.sqrt($"r2"))
   .withColumn("ibin",(($"r"-rmin)/dr).cast(IntegerType))
   .drop("r2","r")
   .withColumn("prod",$"w"*$"w2")
   .drop("w","w2")
-//  .repartition(numPart)
 //  .persist(StorageLevel.MEMORY_AND_DISK)
 
+
+println("edges:")
 edges.printSchema
+
+
 val np3=edges.rdd.getNumPartitions
-println("edges numParts="+np3)
+println("edges #partitions="+np3)
 
 println("==> joining with nside2="+nside2+": output="+edges.columns.mkString(", "))
 //val nedges=edges.count()
-val nedges=0.0
-//println(f"#edges=${nedges/1e6}%3.2f M")
+//val nedges=0.0
+//println(f"#edges=${nedges/1e9}%3.2f G")
 
 val tjoin=timer.step
 timer.print("join")
@@ -174,24 +211,26 @@ timer.print("join")
 val binned=edges.groupBy("ibin").agg(F.sum($"prod") as "Nbin").sort("ibin").cache
 
 //val binned=edges.rdd.map(r=>(r.getInt(0),r.getLong(1))).reduceByKey(_+_).toDF("ibin","Nbin")
+//nice show
 binning.join(binned,"ibin").show
 //binned.show
 
-//binned.agg(F.sum($"Nbin")).show
-//joli output
+//nedges
+val sumbins=binned.agg(F.sum($"Nbin"))
+sumbins.show
+val ntot=sumbins.take(1)(0).getLong(0)
 
 val tbin=timer.step
 timer.print("binning")
 
+
 val fulltime=(timer.time-start)*1e-9/60
 println(s"TOT TIME=${fulltime} mins")
 
-
 val nodes=System.getenv("SLURM_JOB_NUM_NODES")
 
-
 println("binW,start,end,nside1,nside2,Ns,nedges,tmin")
-println(f"@$binSize,$tmin,$tmax,$nside1,$nside2,$Ns,$nedges,$fulltime%.2f")
+println(f"@$binSize,$tmin,$tmax,$nside1,$nside2,$Ns,$ntot,$fulltime%.2f")
 println(f"@nodes=$nodes parts=($np1,$np2,$np3): source=${tsource.toInt}s dups=${tdup.toInt}s join=${tjoin.toInt}s bins=${tbin.toInt}, tot=$fulltime%.2f mins")
 
 
