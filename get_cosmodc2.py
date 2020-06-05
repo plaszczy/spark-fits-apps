@@ -44,7 +44,7 @@ df=df_all
 
 
 #SELECTION
-cols="halo_id,ra,dec,redshift"
+cols="ra,dec,redshift"
 #bands=['u','g','r','i','z','y']
 bands=['i']
 for b in bands:
@@ -89,4 +89,4 @@ print("size={} M".format(gold_true.count()/1e6))
 timer.stop()
 
 #cosmodc2
-#rot=[61.81579482165925,-35.20157446022967]
+cen=[61.81579482165925,-35.20157446022967]

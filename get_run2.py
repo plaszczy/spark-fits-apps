@@ -119,7 +119,7 @@ goldust=gold10.filter(gold10.blendedness<10**(-0.375))
 if doCounts:
     print("|| unblended || {:.1f} ||".format(goldust.count()/1e6))
 
-
+iqual=gold5.filter((gold5.mag_i_cModel<24) & (gold5.blendedness<10**(-0.375)))
 
 timer.stop()
 
