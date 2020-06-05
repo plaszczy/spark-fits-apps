@@ -1,4 +1,4 @@
-
+df=df.select("tract","patch")
 pairs=df.groupBy(["tract","patch"]).count()
 p= pairs.groupBy("tract").count() 
 p.count()
