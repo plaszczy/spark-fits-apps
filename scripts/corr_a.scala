@@ -20,8 +20,8 @@ val args = sc.getConf.get("spark.driver.args").split("\\s+")
 val binSize:Double = args(0).toDouble
 val nside1:Int= args(1).toInt
 val Nbins:Int= args(2).toInt
-val nside2:Int= args(3).toInt
-val numPart:Int=args(4).toInt
+//val nside2:Int= args(3).toInt
+val numPart:Int=args(3).toInt
 
 //en arcmin
 val t=List.tabulate(Nbins+1)(i=>2.5+i*binSize)
@@ -94,8 +94,11 @@ val newinput=pixmap.withColumnRenamed("count","w")
 
 //println("Reduced data size="+newinput.count)
 // automatic
-//val i=floor(-log(thetacut)/log(2.0)).toInt
-//val nside2=pow(2,i-1).toInt
+val i=floor(-log(rmax)/log(2.0)).toInt
+val nside2=pow(2,i).toInt
+
+println(s"$tmax arcmin -> nside=$nside2")
+
 
 val grid = HealpixGrid(new HealpixBase(nside2, NESTED), new ExtPointing)
 def Ang2pix=spark.udf.register("Ang2pix",(theta:Double,phi:Double)=>grid.index(theta,phi))
@@ -212,13 +215,10 @@ val binned=edges.groupBy("ibin").agg(F.sum($"prod") as "Nbin").sort("ibin").cach
 
 //val binned=edges.rdd.map(r=>(r.getInt(0),r.getLong(1))).reduceByKey(_+_).toDF("ibin","Nbin")
 //nice show
-binning.join(binned,"ibin").show
-//binned.show
 
 //nedges
 val sumbins=binned.agg(F.sum($"Nbin"))
-sumbins.show
-val ntot=sumbins.take(1)(0).getLong(0)
+val nedges=sumbins.take(1)(0).getLong(0)
 
 val tbin=timer.step
 timer.print("binning")
@@ -229,9 +229,16 @@ println(s"TOT TIME=${fulltime} mins")
 
 val nodes=System.getenv("SLURM_JOB_NUM_NODES")
 
-println("binW,start,end,nside1,nside2,Ns,nedges,tmin")
-println(f"@$binSize,$tmin,$tmax,$nside1,$nside2,$Ns,$ntot,$fulltime%.2f")
-println(f"@nodes=$nodes parts=($np1,$np2,$np3): source=${tsource.toInt}s dups=${tdup.toInt}s join=${tjoin.toInt}s bins=${tbin.toInt}, tot=$fulltime%.2f mins")
+println("\nSummary: ************************************")
+println("@| tmin | tmax | Nbins | bW | nside1 | nside2 | Ns |  Ne  | time")
+println(f"@| $tmin | $tmax | $Nbins | $binSize | $nside1 | $nside2 | $Ns%g | $nedges%g | $fulltime%.2f")
+println(f"@ nodes=$nodes parts=($np1 | $np2 | $np3): source=${tsource.toInt}s dups=${tdup.toInt}s join=${tjoin.toInt}s bins=${tbin.toInt} |  tot=$fulltime%.2f mins")
+
+//nice output+sum
+binning.join(binned,"ibin").show(Nbins)
+sumbins.show
+
+
 
 
 System.exit(0)
