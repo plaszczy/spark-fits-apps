@@ -32,7 +32,7 @@ class Timer (var t0:Double=System.nanoTime().toDouble,   var dt:Double=0)  {
 //Healpix
 class ExtPointing extends Pointing with java.io.Serializable
 //val nside=262144
-//val nside=131072
+val nside=131072
 //val nside=32
 
 

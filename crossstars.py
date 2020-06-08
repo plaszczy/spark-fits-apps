@@ -2,68 +2,30 @@ from df_tools import *
 from tools import *
 from histfile import *
 
-crosstars="/lsst/DC2/run22xstars.parquet"
+crossstars="/lsst/DC2/run22xstars.parquet"
 
 #cosmoXobj
-df1=spark.read.parquet("/lsst/DC2/df4.parquet")
+df1=spark.read.parquet(crossstars)
 
-#refXobj
-df1=spark.read.parquet("/lsst/DC2/refcatXobj.parquet")
-#stars
-df1=df1.filter(df1.isresolved==False)
-
-df1=df1.withColumnRenamed("i_smeared","mag_i")
-df1=df1.withColumnRenamed("r_smeared","mag_r")
-
-
-#refcat
-ref=spark.read.parquet("/lsst/DC2/refcat_v3_dc2_r2p1i.parquet")
-stars=ref.filter(ref.isresolved==False)
-agn=ref.filter(ref.isagn==True)
-gal=ref.filter((ref.isagn==False)&(ref.isresolved==True))
-
-#cuts obj
-df1=df1.filter( (df1["clean"]==1)) 
-#df1=df1.filter(df1["extendedness"]==1)
-
-df1=df1.withColumn("flux_i",F.pow(10.0,-(df1["mag_i"]-31.4)/2.5))
-
-#cmodel
-#df1=df1.withColumn("dflux",df1["cModelFlux_i"]-df1["flux_i"])
-#df1=df1.withColumn("dmag_i",df1["mag_i_cModel"]-df1["mag_i"])
-#df1=df1.withColumn("dmag_r",df1["mag_r_cModel"]-df1["mag_r"])
-
-#psf flux
-df1=df1.withColumn("dflux",df1["psFlux_i"]-df1["flux_i"])
-df1=df1.withColumn("mag_i_psf",-2.5*F.log10(df1.psFlux_i)+31.4)
-df1=df1.withColumn("mag_r_psf",-2.5*F.log10(df1.psFlux_r)+31.4)
-df1=df1.withColumn("dmag_i",df1["mag_i_psf"]-df1["mag_i"])
-df1=df1.withColumn("dmag_r",df1["mag_r_psf"]-df1["mag_r"])
-
-
-
-#df1=df1.withColumn("sigpos",df1["sigr"]/df1["snr_i_cModel"]).drop("sigr")
+#verif spatiale
 df1=df1.withColumn("dx",F.degrees(F.sin((df1["theta_s"]+df1["theta_t"])/2)*(df1["phi_s"]-df1["phi_t"]))*3600)
 df1=df1.withColumn("dy",F.degrees(df1["theta_s"]-df1["theta_t"])*3600)
-df1=df1.withColumn("psf_x",df1["dx"]*df1["snr_i_cModel"]/sqrt(2.))
-df1=df1.withColumn("psf_y",df1["dy"]*df1["snr_i_cModel"]/sqrt(2.))
-
-df1=df1.withColumn("r-i_true",df1['mag_r']-df1['mag_i'])
-df1=df1.withColumn("r-i_rec",df1['mag_r_cModel']-df1['mag_i_cModel'])
-df1=df1.withColumn("d(r-i)",df1['r-i_rec']-df1['r-i_true'])
-
-#df1=df1.filter(df1.r<0.6)
-
-df1.cache().count()
-
-# pixel borders
-x,y,m=df_histplot2(df1,"dx","dy",Nbin1=100,Nbin2=100,bounds=((-2.5,2.5),(-2.5,2.5))) 
-clf()
-imshowXY(x,y,log10(1+m))
-#zoom avec cut r<1
 x,y,m=df_histplot2(df1,"dx","dy",Nbin1=100,Nbin2=100,bounds=((-1,1),(-1,1)))
 clf()
 imshowXY(x,y,log10(1+m))
+
+df1=df1.filter(df1.r<0.1)
+df1=df1.filter(df1.extendedness<0.1)
+df1=df1.withColumnRenamed("i_smeared","mag_i_star").withColumnRenamed("r_smeared","mag_r_star")
+
+
+#delta mags
+df1=df1.withColumn("mag_i_star-mag_i",df1["mag_i_star"]-df1["mag_i"])
+df1=df1.withColumn("mag_r_star-mag_r",df1["mag_r_star"]-df1["mag_r"])
+
+
+df1.cache().count()
+
 
 
 #r-flux
