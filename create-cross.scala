@@ -12,13 +12,14 @@ val stars=ref.filter($"isresolved"===false).select("id","ra","dec","i_smeared","
 val magcut=23.0
 var obj=spark.read.parquet(System.getenv("RUN22"))
 //cut stars (pas sur cmodel)
-val run2=obj.filter(($"psFlux_flag_i"===false)&&($"psFlux_flag_r"===false)).filter(($"good"===true)&&($"clean"===true)).select("objectId","ra","dec","mag_i","mag_r","extendedness").na.drop.filter($"mag_i"<magcut)
+val run2=obj.filter(($"psFlux_flag_i"===false)&&($"psFlux_flag_r"===false)).filter(($"good"===true)&&($"clean"===true)).select("objectId","ra","dec","mag_i","mag_r","magerr_i","magerr_r","extendedness","psFlux_i","psFluxErr_i","psFlux_r","psFluxErr_r").na.drop.filter($"mag_i"<magcut)
 
 //mag_i est  bien la meme chose que:
 //.withColumn("mag_i_psf",-2.5*F.log10($"psFlux_i")+31.4)
 
 
-:load cross-tools.scala
+:load scripts/cross-tools.scala
 
 val df1=single_match(stars,run2)
 
+df1.write.mode("overwrite").parquet("/lsst/DC2/run22xstars.parquet")
