@@ -2,6 +2,7 @@ from df_tools import *
 from tools import *
 from histfile import *
 
+#############################################
 crossstars="/lsst/DC2/run22xstars.parquet"
 
 #cosmoXobj
@@ -60,17 +61,49 @@ ymax=max(y)
 plot(x,ymax*exp(-x**2/2))
 #xlabel("(flux(rec)-flux(true))/sigma(flux)")
 
-
-#astro vs photo
-x,y,m=df_histplot2(df1.filter(df1.snr_i_cModel>10),"dmag_i","r",bounds=((-0.2,0.2),(0,0.1)),Nbin1=200,Nbin2=200)
-title(r"SNR>10")
-x,y,m=df_histplot2(df1,"dmag_i","snr_i_cModel",bounds=((-0.2,0.2),(0,100)),Nbin1=200,Nbin2=200)
-
-
+##################################################
+#cosmodc2
+from df_tools import * 
+from tools import *
+from histfile import *
 
 
-#colors
+crossstars="/lsst/DC2/run22xCdc2.parquet"
+df1=spark.read.parquet(crossstars)
 
-x,y,m=df_histplot2(df1,"d(r-i)","r",bounds=((-0.2,0.2),(0,0.1)),Nbin1=200,Nbin2=200)
+#verif spatiale
+df1=df1.withColumn("dx",F.degrees(F.sin((df1["theta_s"]+df1["theta_t"])/2)*(df1["phi_s"]-df1["phi_t"]))*3600)
+df1=df1.withColumn("dy",F.degrees(df1["theta_s"]-df1["theta_t"])*3600)
+x,y,m=df_histplot2(df1,"dx","dy",Nbin1=100,Nbin2=100,bounds=((-1,1),(-1,1)))
+clf()
+imshowXY(x,y,log10(1+m))
 
-x,y,m=df_histplot2(df1,"d(r-i)","snr_i_cModel",bounds=((-0.5,0.5),(5,30)),Nbin1=200,Nbin2=200)
+#final cut
+#df1=df1.filter(df1.extendedness>0.5)
+df1=df1.filter(df1.r<0.35)
+
+
+#dmag
+df1=df1.withColumn("dmag_i",df1.mag_i-df1.mag_i_cModel)
+
+snrcut=10
+x,y,m=df_histplot2(df1.filter(df1.snr_i_cModel>snrcut),"dmag_i","mag_i_cModel",Nbin1=200,Nbin2=200,bounds=[[-1,1],[21,25.3]]) 
+clf()
+imshowXY(x,y,log10(1+m))
+xlabel("mag_i-mag_i_cModel")
+ylabel("mag_i_cModel")
+title("SRN>{}".format(snrcut))
+
+snrcut=15
+x,y,m=df_histplot2(df1.filter(df1.snr_i_cModel>snrcut),"dmag_i","mag_i",Nbin1=200,Nbin2=200,bounds=[[-1,1],[21,25.3]]) 
+clf()
+imshowXY(x,y,log10(1+m))
+xlabel("mag_i-mag_i_cModel")
+ylabel("mag_i")
+title("SRN>{}".format(snrcut))
+
+#1d
+#depend du cut
+p=df_histplot(df1.filter((df1.snr_i_cModel>10)&(df1.mag_i<24)),"dmag_i",Nbins=500,bounds=[-1,1])
+
+

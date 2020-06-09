@@ -1,4 +1,4 @@
-
+/////////////////////////////////////
 //stars X run2
 //stars
 val ref=spark.read.parquet("/lsst/DC2/refcat_v3_dc2_r2p1i.parquet")
@@ -21,5 +21,33 @@ val run2=obj.filter(($"psFlux_flag_i"===false)&&($"psFlux_flag_r"===false)).filt
 :load scripts/cross-tools.scala
 
 val df1=single_match(stars,run2)
-
 df1.write.mode("overwrite").parquet("/lsst/DC2/run22xstars.parquet")
+
+///////////////////////////////////////////////////
+
+//run2xCosmoDC2
+
+// run2
+val magcut=25.3
+var run2=spark.read.parquet(System.getenv("RUN22"))
+
+//filter gal
+run2=run2.filter(($"good"===true)&&($"clean"===true)).filter($"mag_i_cModel"<magcut).filter($"snr_i_cModel">1).filter($"extendedness">0.5)
+
+
+run2=run2.select("objectId","ra","dec","psf_fwhm_i","mag_i_cModel","magerr_i_cModel","snr_i_cModel","blendedness").na.drop
+
+//cosmodc2 (no ultrafaint)
+//var gal=spark.read.parquet(System.getenv("COSMODC2"))
+var gal=spark.read.parquet("/lsst/DC2/cosmoDC2/cosmoDC2_v1.1.4_image_nofaint.parquet")
+
+//loose cut
+gal=gal.filter($"mag_i"<26)
+// select columns
+gal=gal.select("galaxy_id","ra","dec","mag_i")
+
+
+:load scripts/cross-tools.scala
+
+val df1=single_match(run2,gal)
+df1.write.mode("overwrite").parquet("/lsst/DC2/run22xCdc2.parquet")
