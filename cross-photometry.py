@@ -68,7 +68,7 @@ from tools import *
 from histfile import *
 
 
-crossstars="/lsst/DC2/run22xCdc2.parquet"
+crossstars="/lsst/DC2/DR6axCdc2.parquet"
 df1=spark.read.parquet(crossstars)
 
 #verif spatiale
@@ -85,6 +85,11 @@ df1=df1.filter(df1.r<0.35)
 
 #dmag
 df1=df1.withColumn("dmag_i",df1.mag_i-df1.mag_i_cModel)
+df1=df1.withColumn("dmmag_i",-1000*df1.dmag_i)
+
+df1=df1.withColumn("pull_i",df1.dmag_i/df1.magerr_i_cModel)
+df1.cache().count()
+
 
 snrcut=10
 x,y,m=df_histplot2(df1.filter(df1.snr_i_cModel>snrcut),"dmag_i","mag_i_cModel",Nbin1=200,Nbin2=200,bounds=[[-1,1],[21,25.3]]) 
@@ -107,3 +112,14 @@ title("SRN>{}".format(snrcut))
 p=df_histplot(df1.filter((df1.snr_i_cModel>10)&(df1.mag_i<24)),"dmag_i",Nbins=500,bounds=[-1,1])
 
 
+icut=24
+p=df_histplot(df1.filter((df1.snr_i_cModel>10)&(df1.mag_i_cModel<icut)),"dmmag_i",Nbins=100,bounds=[-1000,1000])
+xlabel("mag_i_cModel-mag_i [mmag]")
+addStat(p['loc'].values,p['count'].values)
+title("mag_i_cModel<{}".format(icut))
+
+icut=24
+p=df_histplot(df1.filter((df1.snr_i_cModel>10)&(df1.mag_i_cModel<icut)),"pull_i",Nbins=100,bounds=[-20,20])
+xlabel("pull_i")
+addStat(p['loc'].values,p['count'].values)
+title("mag_i_cModel<{}".format(icut))

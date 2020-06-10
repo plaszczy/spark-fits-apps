@@ -94,8 +94,11 @@ def single_match(df_src:DataFrame,df_target:DataFrame,rcut:Double=1.0,ra_src:Str
     val dfclean1=df1.filter(not(df1("ipix")===F.lit(-1))).drop("neighbours")
     dups(i)=dfclean1
   }
-  dups(8)=source
+  //dups(8)=source
 
+  val cols=dups(0).columns
+  dups(8)=source.select(cols.head,cols.tail:_*)
+  
   val dup=dups.reduceLeft(_.union(_))
 
   println("*** caching source+duplicates: "+dup.columns.mkString(", "))

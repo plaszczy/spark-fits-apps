@@ -41,8 +41,8 @@ run2=run2.select("objectId","ra","dec","psf_fwhm_i","mag_i_cModel","magerr_i_cMo
 //var gal=spark.read.parquet(System.getenv("COSMODC2"))
 var gal=spark.read.parquet("/lsst/DC2/cosmoDC2/cosmoDC2_v1.1.4_image_nofaint.parquet")
 
-//loose cut
-gal=gal.filter($"mag_i"<26)
+//same cut
+gal=gal.filter($"mag_i"<magcut)
 // select columns
 gal=gal.select("galaxy_id","ra","dec","mag_i")
 
@@ -50,4 +50,4 @@ gal=gal.select("galaxy_id","ra","dec","mag_i")
 :load scripts/cross-tools.scala
 
 val df1=single_match(run2,gal)
-df1.write.mode("overwrite").parquet("/lsst/DC2/run22xCdc2.parquet")
+df1.write.mode("overwrite").parquet("/lsst/DC2/DR6axCdc2.parquet")

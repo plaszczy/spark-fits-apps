@@ -12,7 +12,7 @@ def addStat(x,y):
         sig=sqrt(vx)
         S=sum((xx/sig)**3*f)
         K=sum((xx/sig)**4*f)-3
-        imax=argmax(y)
+        imax=y.argmax()
         xup=x[imax:]
         yup=y[imax:]
         x1=x[imax]
