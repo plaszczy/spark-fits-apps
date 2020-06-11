@@ -125,8 +125,8 @@ println("dup partitions="+np2)
 //3 build PAIRS with cuts
 val pairs=source.join(dup,"ipix")
   .drop("ipix")
-  .filter($"id"<$"id2")
-  .drop("id","id2")
+  .filter($"id"=!=$"id2")
+  .drop("id2")
 
 println("pairs:")
 pairs.printSchema
@@ -170,13 +170,25 @@ binned.count
 //binned.agg(F.sum($"Nbin")).show
 //joli output
 
-
 val tbin=timer.step
 timer.print("binning")
 
 //nedges
 val sumbins=binned.agg(F.sum($"Nbin"))
 val nedges=sumbins.take(1)(0).getLong(0)
+
+//degree
+val deg=edges.groupBy("id").count
+dup.unpersist
+
+println("waiting for deg...")
+println(deg.cache.count)
+//stats
+deg.describe("count").show()
+
+val tdeg=timer.step
+timer.print("degree")
+
 
 val fulltime=(timer.time-start)*1e-9/60
 println(s"TOT TIME=${fulltime} mins")

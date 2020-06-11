@@ -21,7 +21,7 @@ val binSize:Double = args(0).toDouble
 val nside1:Int= args(1).toInt
 val Nbins:Int= args(2).toInt
 //val nside2:Int= args(3).toInt
-val numPart:Int=args(3).toInt
+//val numPart:Int=args(3).toInt
 
 //en arcmin
 val t=List.tabulate(Nbins+1)(i=>2.5+i*binSize)
