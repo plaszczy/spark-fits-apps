@@ -125,3 +125,12 @@ timer.stop()
 
 #centre
 cen=[61.89355123721637,-36.006714393702175]
+
+
+# from qa_tools import *
+#sky=densitymap(iqual,rot=cen,xsize=350)
+
+#from healpy import *
+#from matplotlib import pyplot as plt
+#plt.figure()
+#plt.hist(sky[sky != UNSEEN],bins=100)

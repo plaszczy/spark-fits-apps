@@ -13,19 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-nargs=$#
-echo "nargs=$nargs"
-if [ $nargs -eq 0 ] ; then
+margs=$#
+echo "margs=$margs"
+if [ $margs -eq 0 ] ; then
 echo "missing shell [pyspark/spark-shell opts (jup)]"
 exit
 fi
 
 n_executors=9
-if [ $nargs -gt 1 ] ; then
+if [ $margs -gt 1 ] ; then
     n_executors=$2
 fi
 echo "runinng on  ${n_executors} executors"
 
+
+if [ $margs -eq 3 ]; then 
+	echo "use jupyter notebook"
+fi
 #machine specific
 source sparkopts.sh ${n_executors}
 
@@ -38,10 +42,12 @@ cmd="$1 $SPARKOPTS --jars $MYJARS"
 export PYSPARK_DRIVER_PYTHON=ipython
 
 #jup
-if [ $nargs -eq 3 ]; then 
-export PYSPARK_DRIVER_PYTHON=
-cmd="PYSPARK_DRIVER_PYTHON_OPTS='/opt/anaconda/bin/jupyter-notebook --no-browser --port=24501' $cmd"
+if [ $margs -eq 3 ]; then 
+	echo "running on PPORT=$PORT"
+    export PYSPARK_DRIVER_PYTHON=
+    cmd="PYSPARK_DRIVER_PYTHON_OPTS='/opt/anaconda/bin/jupyter-notebook --no-browser --port=$PORT' $cmd"
 fi
+
 echo "running >>>>>>>>>>>>>>>>"
 echo $cmd
 echo "<<<<<<<<<<<<<<<<<<<<<<<<"
