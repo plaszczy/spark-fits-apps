@@ -40,24 +40,32 @@ df_all.printSchema()
 
 #FILTER
 #df=df_all.filter(df_all.halo_id>0)
-df=df_all
+
 
 
 #SELECTION
-cols="ra,dec,redshift"
+#cols="ra,dec,redshift"
 #bands=['u','g','r','i','z','y']
-bands=['i']
-for b in bands:
-    s=",mag_{0},Mag_true_{0}_lsst_z0".format(b)
-    cols+=s
+#bands=['i']
+#for b in bands:
+#    s=",mag_{0},Mag_true_{0}_lsst_z0".format(b)
+#    cols+=s
 #use these columns
-df=df.select(cols.split(','))
+#df=df.select(cols.split(','))
 
 # renommage
-for b in bands:
-    df=df.withColumnRenamed("Mag_true_{}_lsst_z0".format(b),"M{}".format(b))
+#for b in bands:
+#    df=df.withColumnRenamed("Mag_true_{}_lsst_z0".format(b),"M{}".format(b))
+#colbands=['b','g','r','y','m','k']
 
-colbands=['b','g','r','y','m','k']
+#shear
+df=df_all.select('ra','dec','redshift','shear_1','shear_2','convergence','magnification')
+df=df.withColumn("shear_phase",0.5*F.atan2(df.shear_2,df.shear_1))
+df=df.withColumn("shear_amp",F.hypot(df.shear_2,df.shear_1))
+df=df.withColumn("shear_amp",F.hypot(df.shear_2,df.shear_1))
+df=df.withColumn("true_g1",df.shear_1/(1-df.convergence))
+df=df.withColumn("true_g2",df.shear_2/(1-df.convergence))
+
 
 # ADD HEALPIXELS
 print('add healpixels')
@@ -80,10 +88,8 @@ print("#VARIABLES={} out of {} ({:3.1f}%)".format(len(df.columns),len(df_all.col
 #print("caching...")
 #df=df.cache()
 
-gold_true=df.filter(df.mag_i<25.3).cache()
-
-print("size={} M".format(gold_true.count()/1e6))
-
+#gold_true=df.filter(df.mag_i<25.3).cache()
+#print("size={} M".format(gold_true.count()/1e6))
 
 
 timer.stop()

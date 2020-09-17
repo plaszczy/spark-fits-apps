@@ -83,18 +83,24 @@ def projmap_mean(df,col,minmax=None,dohist=True,**kwargs ):
     sig=float(r[2][0])
     map_p=df_map.toPandas()
 
-    #now data is reduced create the healpy map
+    #now data is reducd create the healpy map
     skyMap= np.full(hp.nside2npix(nside),hp.UNSEEN)
     skyMap[map_p['ipix'].values]=map_p[var].values
     
     if minmax==None:
-        minmax=(np.max([0,mu-2*sig]),mu+2*sig)
-
-    if dohist:
-        plt.hist(map_p[var].values,bins=80,range=minmax)
-        plt.xlabel(var)
+        minmax=(mu-2*sig,mu+2*sig)
 
     hp.gnomview(skyMap,reso=reso,min=minmax[0],max=minmax[1],nest=nest,title=var,**kwargs )
+
+    if dohist:
+        plt.figure()
+        plt.hist(map_p[var].values,bins=80,range=minmax)
+        plt.xlabel(var)
+        stat=[r"$N={:d}$".format(N),r"$\mu={:g}$".format(mu),r"$\sigma={:g}$".format(sqrt(sig))]
+        ax=gca()
+        text(0.7,0.8,"\n".join(stat), horizontalalignment='center',transform=ax.transAxes)
+        
+
     plt.show()
     return skyMap
 
@@ -163,7 +169,7 @@ def projmap_median(df,col,minmax=None,**kwargs ):
     mu=val.mean()
     sig=val.std()
     if minmax==None:
-        minmax=(np.max([0,mu-2*sig]),mu+2*sig)
+        minmax=(mu-2*sig,mu+2*sig)
 
     print("N={} \nmean={} \nsigma={}\nmin={}\nmax={}".format(val.size,mu,sig,min(val),max(val)))
     skyMap= np.full(hp.nside2npix(nside),hp.UNSEEN)

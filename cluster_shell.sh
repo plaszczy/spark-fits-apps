@@ -20,7 +20,7 @@ echo "missing shell [pyspark/spark-shell opts (jup)]"
 exit
 fi
 
-n_executors=9
+n_executors=5
 if [ $margs -gt 1 ] ; then
     n_executors=$2
 fi
