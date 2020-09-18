@@ -41,6 +41,7 @@ def df_hist(df,col,Nbins=50,bounds=None):
         df=df.filter(df[col].between(zmin,zmax))
     
     dz=(zmax-zmin)/(Nbins)
+    print("binsize={}".format(z))
     zbin=df.select(((df[col]-F.lit(zmin))/dz).cast(IntegerType()).alias('bin'))
 
     h=zbin.groupBy("bin").count().orderBy(F.asc("bin"))
@@ -48,12 +49,15 @@ def df_hist(df,col,Nbins=50,bounds=None):
       .drop("bin").toPandas(),dz
 
 
-def df_histplot(df,col,Nbins=50,bounds=None,doStat=False):    
+def df_histplot(df,col,Nbins=50,bounds=None,doStat=False,norm=False):    
     result=df_hist(df,col,Nbins,bounds)
     hp=result[0]
     step=result[1]
+    val=hp['count'].values
+    if norm:
+        val=val/np.sum(val)/step
     plt.figure()
-    plt.bar(hp['loc'].values,hp['count'].values,step,color='white',edgecolor='black')
+    plt.bar(hp['loc'].values,val,step,color='white',edgecolor='black')
     plt.xlabel(col)
     if doStat:
         s=df.describe([col])
