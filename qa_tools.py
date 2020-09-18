@@ -71,7 +71,7 @@ def tracts_outline2(df):
     pix = df_repart.rdd.mapPartitions(get_borders_from_ipix).collect()
     return pix
 
-def projmap_mean(df,col,minmax=None,dohist=True,**kwargs ):
+def projmap_mean(df,col,minmax=None,nsig=2,dohist=True,**kwargs ):
     df_map=df.select(col,"ipix").na.drop().groupBy("ipix").avg(col)
     #statistics per pixel
     var=df_map.columns[-1]
@@ -88,7 +88,7 @@ def projmap_mean(df,col,minmax=None,dohist=True,**kwargs ):
     skyMap[map_p['ipix'].values]=map_p[var].values
     
     if minmax==None:
-        minmax=(mu-2*sig,mu+2*sig)
+        minmax=(mu-nsig*sig,mu+nsig*sig)
 
     hp.gnomview(skyMap,reso=reso,min=minmax[0],max=minmax[1],nest=nest,title=var,**kwargs )
 
@@ -96,9 +96,9 @@ def projmap_mean(df,col,minmax=None,dohist=True,**kwargs ):
         plt.figure()
         plt.hist(map_p[var].values,bins=80,range=minmax)
         plt.xlabel(var)
-        stat=[r"$N={:d}$".format(N),r"$\mu={:g}$".format(mu),r"$\sigma={:g}$".format(sqrt(sig))]
-        ax=gca()
-        text(0.7,0.8,"\n".join(stat), horizontalalignment='center',transform=ax.transAxes)
+        stat=[r"$N={:d}$".format(N),r"$\mu={:g}$".format(mu),r"$\sigma={:g}$".format(np.sqrt(sig))]
+        ax=plt.gca()
+        plt.text(0.7,0.8,"\n".join(stat), horizontalalignment='center',transform=ax.transAxes)
         
 
     plt.show()
