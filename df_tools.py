@@ -41,7 +41,7 @@ def df_hist(df,col,Nbins=50,bounds=None):
         df=df.filter(df[col].between(zmin,zmax))
     
     dz=(zmax-zmin)/(Nbins)
-    print("binsize={}".format(z))
+    print("binsize={}".format(dz))
     zbin=df.select(((df[col]-F.lit(zmin))/dz).cast(IntegerType()).alias('bin'))
 
     h=zbin.groupBy("bin").count().orderBy(F.asc("bin"))
