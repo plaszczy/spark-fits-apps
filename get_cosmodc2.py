@@ -63,10 +63,10 @@ df=df_all.select('ra','dec','redshift','shear_1','shear_2','convergence','magnif
 df=df.withColumn("shear_phase",0.5*F.atan2(df.shear_2,df.shear_1))
 df=df.withColumn("shear_amp",F.hypot(df.shear_2,df.shear_1))
 df=df.withColumn("shear_amp",F.hypot(df.shear_2,df.shear_1))
-df=df.withColumn("true_g1",df.shear_1/(1-df.convergence))
-df=df.withColumn("true_g2",df.shear_2/(1-df.convergence))
 
-
+df=df.withColumn("theta",F.radians(F.lit(90)-F.col("dec")))
+df=df.withColumn("phi",F.radians(F.col("ra")))
+df=df.withColumn("x",F.sin(df["theta"])*F.cos(df["phi"])).withColumn("y",F.sin(df["theta"])*F.sin(df["phi"])).withColumn("z",F.cos(df["theta"])).drop("theta","phi")
 # ADD HEALPIXELS
 print('add healpixels')
 df=add_healpixels(df)
@@ -96,3 +96,17 @@ timer.stop()
 
 #cosmodc2
 cen=[61.81579482165925,-35.20157446022967]
+
+lon=cen[0]
+lat=cen[1]
+phi_c=deg2rad(lon)
+theta_c=deg2rad(90-lat)
+xc=sin(theta_c)*cos(phi_c)
+yc=sin(theta_c)*sin(phi_c)
+zc=cos(theta_c)
+
+
+df=df.withColumn("r",F.hypot(df.x-xc,F.hypot(df.y-yc,df.z-zc))).drop("x","y","z")
+
+#angular distance in degree
+df=df.withColumn("angdist",F.degrees(2*F.asin(df.rr/2)))
