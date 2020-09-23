@@ -74,6 +74,58 @@ def df_histplot(df,col,Nbins=50,bounds=None,doStat=False,norm=False):
     plt.show()
     return hp
 
+
+def df_histby(df,col,meancol,Nbins=50,bounds=None):
+
+#drop nans if any
+    df=df.select(col).na.drop()
+
+    if (bounds==None) :
+        m=df_minmax(df,col)
+        print("{} : min/max=[{},{}]".format(col,m[0],m[1]))
+        zmin=m[0]
+        zmax=m[1]
+    else:
+        zmin=bounds[0] 
+        zmax=bounds[1]
+        df=df.filter(df[col].between(zmin,zmax))
+    
+    dz=(zmax-zmin)/(Nbins)
+    print("binsize={}".format(z))
+    zbin=df.select(((df[col]-F.lit(zmin))/dz).cast(IntegerType()).alias('bin'))
+
+    h=zbin.groupBy("bin").agg(F.avg(meancol)).orderBy(F.asc("bin"))
+    return h.select("bin",(F.lit(zmin+dz/2)+h['bin']*dz).alias('loc'),"count").filter(h['bin']!=Nbins)\
+      .drop("bin").toPandas(),dz
+
+
+def df_histplotby(df,col,meancol,Nbins=50,bounds=None,doStat=False,norm=False):    
+    result=df_histby(df,col,meancol,Nbins,bounds)
+    hp=result[0]
+    step=result[1]
+    val=hp['count'].values
+    if norm:
+        val=val/np.sum(val)/step
+    plt.figure()
+    plt.bar(hp['loc'].values,val,step,color='white',edgecolor='black')
+    plt.xlabel(col)
+    if doStat:
+        s=df.describe([col])
+        s.show()
+        r=s.select(col).take(6)
+        N=int(r[0][0])
+        mu=float(r[1][0])
+        sig=float(r[2][0])
+        min_=float(r[3][0])
+        max_=float(r[4][0])
+        stat=[r"$N={:g}$".format(N),r"$\mu={:g}$".format(mu),r"$\sigma={:g}$".format(sig),"min={:g}".format(min_),"max={:g}".format(max_)]
+        ax=plt.gca()
+        plt.text(0.8,0.7,"\n".join(stat), horizontalalignment='center',transform=ax.transAxes)
+    plt.show()
+    return hp
+
+
+
 def df_histplot2(df,col1,col2,Nbin1=50,Nbin2=50,bounds=None,newfig=True,**kwargs):
 
     df=df.select(col1,col2).na.drop()
