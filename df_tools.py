@@ -78,7 +78,7 @@ def df_histplot(df,col,Nbins=50,bounds=None,doStat=False,norm=False):
 def df_histby(df,col,meancol,Nbins=50,bounds=None):
 
 #drop nans if any
-    df=df.select(col).na.drop()
+    df=df.select(col,meancol).na.drop()
 
     if (bounds==None) :
         m=df_minmax(df,col)
@@ -91,24 +91,26 @@ def df_histby(df,col,meancol,Nbins=50,bounds=None):
         df=df.filter(df[col].between(zmin,zmax))
     
     dz=(zmax-zmin)/(Nbins)
-    print("binsize={}".format(z))
-    zbin=df.select(((df[col]-F.lit(zmin))/dz).cast(IntegerType()).alias('bin'))
+    print("binsize={}".format(dz))
+    zbin=df.withColumn("bin",((df[col]-F.lit(zmin))/dz).cast(IntegerType()))
 
     h=zbin.groupBy("bin").agg(F.avg(meancol)).orderBy(F.asc("bin"))
-    return h.select("bin",(F.lit(zmin+dz/2)+h['bin']*dz).alias('loc'),"count").filter(h['bin']!=Nbins)\
+    n=h.columns[1]
+    return h.select("bin",(F.lit(zmin+dz/2)+h['bin']*dz).alias('loc'),n).filter(h['bin']!=Nbins)\
       .drop("bin").toPandas(),dz
 
 
-def df_histplotby(df,col,meancol,Nbins=50,bounds=None,doStat=False,norm=False):    
+def df_histplotby(df,col,meancol,Nbins=50,bounds=None,doStat=False,newFig=True):    
     result=df_histby(df,col,meancol,Nbins,bounds)
     hp=result[0]
+    n=hp.columns[1]
+    print(n)
     step=result[1]
-    val=hp['count'].values
-    if norm:
-        val=val/np.sum(val)/step
+    val=hp[n].values
     plt.figure()
     plt.bar(hp['loc'].values,val,step,color='white',edgecolor='black')
     plt.xlabel(col)
+    plt.ylabel(n)
     if doStat:
         s=df.describe([col])
         s.show()
