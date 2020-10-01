@@ -93,3 +93,33 @@ figure()
 xlabel("g1")
 ylabel("f(g1|g2)")
 legend()
+
+
+X1,X2=meshgrid(x,x)
+figure()
+contour(X1,X2,log(a),10)
+suptitle("log [f(g1,g2)/(f(g1)f(g2))]")
+xlabel("g1")
+ylabel("g2")
+axhline(0,c='k',lw=1)
+axvline(0,c='k',lw=1)
+
+
+X1,X2=meshgrid(x,x)
+
+figure()
+contour(X1,X2,log(a)+log(G1),10)
+suptitle("log [f(g1,g2)/(f(g2))]")
+xlabel("g1")
+ylabel("g2")
+axhline(0,c='k',lw=1)
+axvline(0,c='k',lw=1)
+
+figure()
+contour(X1,X2,log(G1),10)
+suptitle("log [f(g1)]")
+xlabel("g1")
+ylabel("g2")
+axhline(0,c='k',lw=1)
+axvline(0,c='k',lw=1)
+
