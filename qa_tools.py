@@ -148,7 +148,7 @@ def projmap_stddev(df,col,minmax=None,dohist=True,**kwargs ):
     skyMap[map_p['ipix'].values]=map_p[var].values
     
     if minmax==None:
-        minmax=(np.max([0,mu-2*sig]),mu+2*sig)
+        minmax=(mu-2*sig,mu+2*sig)
 
     if dohist:
         plt.hist(map_p[var].values,bins=80,range=minmax)
