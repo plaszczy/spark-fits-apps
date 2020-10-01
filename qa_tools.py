@@ -131,8 +131,8 @@ def projmap_max(df,col,minmax=None,dohist=True,**kwargs ):
     plt.show()
     return skyMap
 
-def projmap_std(df,col,minmax=None,dohist=True,**kwargs ):
-    df_map=df.select(col,"ipix").na.drop().groupBy("ipix").std(col)
+def projmap_stddev(df,col,minmax=None,dohist=True,**kwargs ):
+    df_map=df.select(col,"ipix").na.drop().groupBy("ipix").agg(F.stddev(col))
     #statistics per pixel
     var=df_map.columns[-1]
     s=df_map.describe([var])
