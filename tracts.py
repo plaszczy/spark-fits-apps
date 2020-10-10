@@ -3,7 +3,9 @@ import pyspark.sql.functions as F
 df_all=spark.read.parquet(os.environ['RUN22'])
 
 df=df_all.select("tract","patch","ra","dec")
+
 df.cache().count()
+
 pairs=df.groupBy(["tract","patch"]).count()
 p= pairs.groupBy("tract").count().withColumnRenamed("count","npatch")
 p.count()
