@@ -60,9 +60,9 @@ df_all.printSchema()
 #colbands=['b','g','r','y','m','k']
 
 #shear
-df=df_all.select('ra','dec','redshift','shear_1','shear_2')
-df=df.withColumn("shear_phase",0.5*F.atan2(df.shear_2,df.shear_1))
-df=df.withColumn("shear_amp",F.hypot(df.shear_2,df.shear_1))
+df=df_all.select('ra','dec','redshift','shear_1','shear_2','convergence')
+#df=df.withColumn("shear_phase",0.5*F.atan2(df.shear_2,df.shear_1))
+#df=df.withColumn("shear_amp",F.hypot(df.shear_2,df.shear_1))
 
 # ADD HEALPIXELS
 print('add healpixels')

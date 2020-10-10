@@ -158,6 +158,60 @@ def projmap_stddev(df,col,minmax=None,dohist=True,**kwargs ):
     plt.show()
     return skyMap
 
+def projmap_min(df,col,minmax=None,dohist=True,**kwargs ):
+    df_map=df.select(col,"ipix").na.drop().groupBy("ipix").min(col)
+    #statistics per pixel
+    var=df_map.columns[-1]
+    s=df_map.describe([var])
+    s.show()
+    r=s.select(var).take(3)
+    N=int(r[0][0])
+    mu=float(r[1][0])
+    sig=float(r[2][0])
+    map_p=df_map.toPandas()
+
+    #now data is reduced create the healpy map
+    skyMap= np.full(hp.nside2npix(nside),hp.UNSEEN)
+    skyMap[map_p['ipix'].values]=map_p[var].values
+    
+    if minmax==None:
+        minmax=(np.max([0,mu-2*sig]),mu+2*sig)
+
+    if dohist:
+        plt.hist(map_p[var].values,bins=80,range=minmax)
+        plt.xlabel(var)
+
+    hp.gnomview(skyMap,nest=nest,reso=reso,min=minmax[0],max=minmax[1],title=var,**kwargs )
+    plt.show()
+    return skyMap
+
+def projmap_stddev(df,col,minmax=None,dohist=True,**kwargs ):
+    df_map=df.select(col,"ipix").na.drop().groupBy("ipix").agg(F.stddev(col))
+    #statistics per pixel
+    var=df_map.columns[-1]
+    s=df_map.describe([var])
+    s.show()
+    r=s.select(var).take(3)
+    N=int(r[0][0])
+    mu=float(r[1][0])
+    sig=float(r[2][0])
+    map_p=df_map.toPandas()
+
+    #now data is reduced create the healpy map
+    skyMap= np.full(hp.nside2npix(nside),hp.UNSEEN)
+    skyMap[map_p['ipix'].values]=map_p[var].values
+    
+    if minmax==None:
+        minmax=(mu-2*sig,mu+2*sig)
+
+    if dohist:
+        plt.hist(map_p[var].values,bins=80,range=minmax)
+        plt.xlabel(var)
+
+    hp.gnomview(skyMap,nest=nest,reso=reso,min=minmax[0],max=minmax[1],title=var,**kwargs )
+    plt.show()
+    return skyMap
+
 
 
 #from spark v2.4.0 only
