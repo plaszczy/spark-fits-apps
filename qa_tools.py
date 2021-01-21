@@ -4,10 +4,11 @@ from pyspark.sql.functions import pandas_udf, PandasUDFType
 import numpy as np
 import pandas as pd
 import healpy as hp
+from scipy import stats
 from matplotlib import pyplot as plt
 
 #nside=131072
-nside=1024
+nside=2048
 nest=False
 
 pixarea=hp.nside2pixarea(nside, degrees=True)*3600
@@ -263,60 +264,66 @@ def projmap_median(df,col,minmax=None,**kwargs ):
 
 
 
-def countsmap(df,minmax=None,**kwargs):
+def countsmap(df,minmax=None,doHist=True,density=False,**kwargs):
     assert "ipix" in df.columns
     df_map=df.select("ipix").groupBy("ipix").count()
-
     #back to python world
     map_p=df_map.toPandas()
+
     A=map_p.index.size*pixarea/3600
     print("map area={} deg2".format(A))
     #statistics per pixel
     var='count'
     s=df_map.describe([var])
     s.show()
-    r=s.select(var).take(3)
+    r=s.select(var).take(5)
     N=int(r[0][0])
     mu=float(r[1][0])
     sig=float(r[2][0])
+    imin=int(r[3][0])
+    imax=int(r[4][0])
+
+    if density:
+        tit=kwargs.pop("title", r"$density/arcmin^2$")
+    else :
+        tit=kwargs.pop("title", "counts/pixel (nside={})".format(nside))
+
+    if doHist:
+        plt.figure()
+        plt.title(tit)
+        nbins=imax-imin-1
+        data=map_p[var].values
+        if density :
+            data=data/pixarea
+        plt.hist(data,bins=nbins)
+        plt.xlabel(var)
+        t=stats.describe(data)
+        N=t[0]
+        m=t[2]
+        sig2=t[3]
+        xmin=t[1][0]
+        xmax=t[1][1]
+        stat=[r"$N={:d}$".format(N),r"$\mu={:g}$".format(m),r"$\sigma={:g}$".format(np.sqrt(sig2)),r"min={:g}".format(xmin),r"max={:g}".format(xmax)]
+        ax=plt.gca()
+        plt.text(0.8,0.7,"\n".join(stat), horizontalalignment='center',transform=ax.transAxes)
+
 
     #now data is reduced create the healpy map
     skyMap= np.full(hp.nside2npix(nside),hp.UNSEEN)
-    skyMap[map_p['ipix'].values]=map_p[var].values
     
     if minmax==None:
         minmax=(np.max([0,mu-2*sig]),mu+2*sig)
-    hp.gnomview(skyMap,nest=nest,reso=reso,min=minmax[0],max=minmax[1],title="density/pixel (nside={})".format(nside),**kwargs)
+
+    if density:
+        skyMap[map_p['ipix'].values]=map_p[var].values/pixarea
+        hp.gnomview(skyMap,nest=nest,reso=reso,min=minmax[0]/pixarea,max=minmax[1]/pixarea,title=tit,**kwargs)
+    else :
+        skyMap[map_p['ipix'].values]=map_p[var].values
+        hp.gnomview(skyMap,nest=nest,reso=reso,min=minmax[0],max=minmax[1],title=tit,**kwargs)
+
     plt.show()
     return skyMap
 
-
-def densitymap(df,minmax=None,**kwargs):
-    df_map=df.select("ipix").groupBy("ipix").count()
-    df_map=df_map.withColumn("density",df_map['count']/pixarea).drop("count")
-
-    #back to python world
-    map_p=df_map.toPandas()
-    A=map_p.index.size*pixarea/3600
-    print("map area={} deg2".format(A))
-    #statistics per pixel
-    var='density'
-    s=df_map.describe([var])
-    s.show()
-    r=s.select(var).take(3)
-    N=int(r[0][0])
-    mu=float(r[1][0])
-    sig=float(r[2][0])
-
-    #now data is reduced create the healpy map
-    skyMap= np.full(hp.nside2npix(nside),hp.UNSEEN)
-    skyMap[map_p['ipix'].values]=map_p[var].values
-    
-    if minmax==None:
-        minmax=(np.max([0,mu-2*sig]),mu+2*sig)
-    hp.gnomview(skyMap,nest=nest,reso=reso,min=minmax[0],max=minmax[1],title=r"$density/arcmin^2$",**kwargs)
-    plt.show()
-    return skyMap
 
 def add_healpixels(df,ra="ra",dec="dec"):
     assert ra in df.columns

@@ -28,3 +28,8 @@ geo=df.groupBy("tract").agg(F.avg("ra"),F.min("ra"),F.max("ra"),F.min("dec"),F.m
 #join with npatch
 dfj=geo.join(p,"tract")
 
+#ckeck bads
+p=dfj.toPandas()
+plt.plot(p["avg(ra)"],p["avg(dec)"],'o')
+bad=(p.npatch!=49)
+plt.plot(p[bad]["avg(ra)"],p[bad]["avg(dec)"],'ro')

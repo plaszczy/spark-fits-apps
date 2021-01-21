@@ -1,11 +1,13 @@
 from pyspark.sql.types import IntegerType
 from pyspark.sql import functions as F
+from pyspark.sql import SparkSession
 
 import numpy as np
 import matplotlib
 matplotlib.rcParams['image.interpolation']='nearest'
 matplotlib.rcParams['image.cmap'] = 'jet' 
 import matplotlib.pyplot as plt
+import pandas
 
 def df_minmax(df,col):
     return df.select(F.min(col),F.max(col)).first()
@@ -27,6 +29,8 @@ def frac_nans(df,col=None):
 
 def df_hist(df,col,Nbins=50,bounds=None):
 
+    spark = SparkSession.builder.getOrCreate()
+
 #drop nans if any
     df=df.select(col).na.drop()
 
@@ -44,9 +48,22 @@ def df_hist(df,col,Nbins=50,bounds=None):
     print("binsize={}".format(dz))
     zbin=df.select(((df[col]-F.lit(zmin))/dz).cast(IntegerType()).alias('bin'))
 
-    h=zbin.groupBy("bin").count().orderBy(F.asc("bin"))
-    return h.select("bin",(F.lit(zmin+dz/2)+h['bin']*dz).alias('loc'),"count").filter(h['bin']!=Nbins)\
-      .drop("bin").toPandas(),dz
+    #bin
+    hdata=zbin.groupBy("bin").count()
+
+    #wrong by 1 on upper edge
+    hdata=hdata.filter(hdata['bin']!=Nbins)
+
+    #add 0s
+    zeros=spark.range(Nbins).withColumnRenamed("id","bin").withColumn("count",F.lit(0))
+    s=hdata.union(zeros)     
+    h=s.groupBy("bin").sum("count").withColumnRenamed("sum(count)","count")
+    h=h.orderBy(F.asc("bin"))
+
+    #add binCenter. go to pandas
+    p=h.select("bin",(F.lit(zmin+dz/2)+h['bin']*dz).alias('binCenter'),"count").drop("bin").toPandas()
+
+    return p,dz
 
 
 def df_histplot(df,col,Nbins=50,bounds=None,doStat=False,norm=False):    
@@ -57,7 +74,7 @@ def df_histplot(df,col,Nbins=50,bounds=None,doStat=False,norm=False):
     if norm:
         val=val/np.sum(val)/step
     plt.figure()
-    plt.bar(hp['loc'].values,val,step,color='white',edgecolor='black')
+    plt.bar(hp['binCenter'].values,val,step,color='white',edgecolor='black')
     plt.xlabel(col)
     if doStat:
         s=df.describe([col])
@@ -96,7 +113,7 @@ def df_histby(df,col,meancol,Nbins=50,bounds=None):
 
     h=zbin.groupBy("bin").agg(F.avg(meancol)).orderBy(F.asc("bin"))
     n=h.columns[1]
-    return h.select("bin",(F.lit(zmin+dz/2)+h['bin']*dz).alias('loc'),n).filter(h['bin']!=Nbins)\
+    return h.select("bin",(F.lit(zmin+dz/2)+h['bin']*dz).alias('binCenter'),n).filter(h['bin']!=Nbins)\
       .drop("bin").toPandas(),dz
 
 
@@ -108,7 +125,7 @@ def df_histplotby(df,col,meancol,Nbins=50,bounds=None,doStat=False,newFig=True):
     step=result[1]
     val=hp[n].values
     plt.figure()
-    plt.bar(hp['loc'].values,val,step,color='white',edgecolor='black')
+    plt.bar(hp['binCenter'].values,val,step,color='white',edgecolor='black')
     plt.xlabel(col)
     plt.ylabel(n)
     if doStat:

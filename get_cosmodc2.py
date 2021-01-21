@@ -45,6 +45,9 @@ df_all.printSchema()
 
 
 #SELECTION
+
+df=df_all.select('ra','dec','mag_i')
+
 #cols="ra,dec,redshift"
 #bands=['u','g','r','i','z','y']
 #bands=['i']
@@ -60,7 +63,7 @@ df_all.printSchema()
 #colbands=['b','g','r','y','m','k']
 
 #shear
-df=df_all.select('ra','dec','redshift','shear_1','shear_2','convergence')
+#df=df_all.select('ra','dec','redshift','mag_i',"mag_r","mag_u","mag_g","mag_z","mag_y")
 #df=df.withColumn("shear_phase",0.5*F.atan2(df.shear_2,df.shear_1))
 #df=df.withColumn("shear_amp",F.hypot(df.shear_2,df.shear_1))
 
@@ -81,14 +84,17 @@ df=add_healpixels(df)
 #print("caching...")
 #df=df.cache()
 
-#gold_true=df.filter(df.mag_i<25.3).cache()
-#print("size={} M".format(gold_true.count()/1e6))
+true24=df.filter(df.mag_i<24).cache()
+print("size={} M".format(true24.count()/1e6))
 
 
 timer.stop()
 
 #cosmodc2
-cen=[61.81579482165925,-35.20157446022967]
+#cen=[61.81579482165925,-35.20157446022967]
+
+# same than run2
+cen=[61.89355123721637,-36.006714393702175]
 
 lon=cen[0]
 lat=cen[1]
@@ -97,7 +103,6 @@ theta_c=deg2rad(90-lat)
 xc=sin(theta_c)*cos(phi_c)
 yc=sin(theta_c)*sin(phi_c)
 zc=cos(theta_c)
-
 
 #angular distance to center in degree
 #df=df.withColumn("theta",F.radians(F.lit(90)-F.col("dec")))

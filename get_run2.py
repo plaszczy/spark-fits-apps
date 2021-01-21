@@ -17,7 +17,7 @@ from Timer import Timer
 from df_tools import *
 from qa_tools import *
 
-doCounts=True
+doCounts=False
 
 #main
 spark = SparkSession.builder.getOrCreate()
@@ -37,7 +37,7 @@ ff=os.environ['RUN22']
 print("input={}".format(ff))
 df_all=spark.read.parquet(ff)
 print("#partitions={}".format(df_all.rdd.getNumPartitions()))
-df_all.printSchema()
+#df_all.printSchema()
 
 if doCounts:
     print("|| all || {:.1f} ||".format(df_all.count()/1e6))
@@ -51,22 +51,20 @@ df=df_all.filter((df_all.good==1)&(df_all.clean==1))
 
 
 #COLUMNS
-cols="tract,patch,ra,dec,extendedness,blendedness"
+cols="ra,dec,extendedness,blendedness"
 for b in ['i']:
 #for b in ['u','g','r','i','z','y']:
-    s=",psFlux_flag_{0},psFlux_{0},psFluxErr_{0},mag_{0},mag_{0}_cModel,magerr_{0}_cModel,snr_{0}_cModel,psf_fwhm_{0}".format(b)
+    s=",mag_{0},mag_{0}_cModel,magerr_{0}_cModel,snr_{0}_cModel,psf_fwhm_{0}".format(b)
     cols+=s
-print(cols)
 
 #use these columns
 df=df.select(cols.split(','))
-
-colbands=['b','g','r','y','m','k']
 
 
 # ADD HEALPIXELS
 print('add healpixels')
 df=add_healpixels(df)
+print("nside={}".format(nside))
 
 if doCounts:
     print("|| good || {:.1f} ||".format(df.count()/1e6))
@@ -81,12 +79,15 @@ if doCounts:
 
 gal=df.filter(df.extendedness==1).drop("extendedness")
 
+
+print("gal=",gal.columns)
+
 if doCounts:
     print("|| gal (ext=1) || {:.1f} ||".format(gal.count()/1e6))
 
 
 #CACHE
-#print("caching gal...")
+print("caching gal...")
 gal=gal.cache()
 
 #print("tot size={} M".format(gal.count()/1e6))
@@ -95,19 +96,18 @@ gal=gal.cache()
 
 #then  cut on mag_cModel
 
-
 #gold
-gold=gal.select("ipix","ra","dec","mag_i","psFlux_i","psFluxErr_i","psf_fwhm_i").na.drop().filter("mag_i<25.3")
+#gold=gal.select("ipix","ra","dec","mag_i","psFlux_i","psFluxErr_i","psf_fwhm_i").na.drop().filter("mag_i<25.3")
+#if doCounts:
+#    print("|| mag_i<25.3 || {:.1f} ||".format(gold.count()/1e6))
+
+gold=gal.select("ipix","ra","dec","mag_i_cModel","magerr_i_cModel","psf_fwhm_i","snr_i_cModel","blendedness").filter("mag_i_cModel<24").na.drop()
+#gold=gold.cache()
 
 if doCounts:
-    print("|| mag_i<25.3 || {:.1f} ||".format(gold.count()/1e6))
+    print("|| mag_i_cModel<24 || {:.1f} ||".format(gold.count()/1e6))
 
-gold_cModel=gal.select("ipix","ra","dec","mag_i_cModel","magerr_i_cModel","psFlux_i","psFluxErr_i","psf_fwhm_i","snr_i_cModel","blendedness").na.drop().filter("mag_i_cModel<25.3")
-
-if doCounts:
-    print("|| mag_i_cModel<25.3 || {:.1f} ||".format(gold_cModel.count()/1e6))
-
-gold5=gold_cModel.filter(gold_cModel.snr_i_cModel>5)
+gold5=gold.filter(gold.snr_i_cModel>5)
 gold10=gold5.filter(gold5.snr_i_cModel>10)
 
 if doCounts:
@@ -119,7 +119,12 @@ goldust=gold10.filter(gold10.blendedness<10**(-0.375))
 if doCounts:
     print("|| unblended || {:.1f} ||".format(goldust.count()/1e6))
 
-iqual=gold5.filter((gold5.mag_i_cModel<24) & (gold5.blendedness<10**(-0.375)))
+iqual=gold5.filter((gold5.mag_i_cModel<24) & (gold5.blendedness<10**(-0.375))).drop("blendedness")
+print("iqual=",iqual.columns)
+
+#if  not doCounts:
+#    print("#gals(i<24)={}M".format(iqual.cache().count()/1e6))
+
 
 timer.stop()
 
@@ -134,3 +139,13 @@ cen=[61.89355123721637,-36.006714393702175]
 #from matplotlib import pyplot as plt
 #plt.figure()
 #plt.hist(sky[sky != UNSEEN],bins=100)
+
+#stars
+#sstars=df.filter(df.extendedness==0).select("ipix","ra","dec","mag_i").na.drop()
+#sstars=sstars.filter(~sstars['mag_i'].contains(np.inf))
+#sstars=sstars.filter(sstars['mag_i']<24).drop("mag_i")
+#print("#stars={}M".format(sstars.cache().count()/1e6))
+
+#concat both
+#galstars=iqual.select("ipix","ra","dec").union(sstars)
+#print("#galstars={}M".format(galstars.cache().count()/1e6))
