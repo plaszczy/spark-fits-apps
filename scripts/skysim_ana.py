@@ -10,7 +10,7 @@ from pyspark.sql.functions import pandas_udf, PandasUDFType
 import pandas as pd
 import numpy as np
 import healpy as hp
-import os
+import os,sys
 
 from time import time
 class Timer:
@@ -34,7 +34,10 @@ class Timer:
 
 
 #main
-ff=os.environ['SKYSIM']
+decpart=int(sys.argv[1])
+
+#ff=os.environ['SKYSIM']
+ff=os.environ['COSMODC2']
 print(ff)
 
 spark = SparkSession.builder.getOrCreate()
@@ -46,18 +49,34 @@ level = getattr(logger.Level, "WARN")
 logger.LogManager.getLogger("org"). setLevel(level)
 logger.LogManager.getLogger("akka").setLevel(level)
 
-
 timer=Timer()
 ana="load"
-df_all=spark.read.parquet(ff).coalesce(10000)
-gal=df_all.select("ra","dec","redshift","mag_i").withColumnRenamed("redshift","z")
+df_all=spark.read.parquet(ff)
+
+#partitions
+numPart=df_all.rdd.getNumPartitions()
+nrepart=numPart//decpart
+print("defaut #parts={}, new one={}".format(numPart,nrepart))
+
+gal=df_all.coalesce(nrepart).select("ra","dec","redshift","mag_i").withColumnRenamed("redshift","z")
+
 gal.printSchema()
 timer.print(ana)
-print("#parts={}".format(gal.rdd.getNumPartitions()))
+print("#gal parts={}".format(gal.rdd.getNumPartitions()))
 
 ####
-ana="cache (count)"
-gal=gal.cache()#.persist(StorageLevel.MEMORY_ONLY_SER)
+
+ana="cache (minmax)"
+gal=gal.cache()
+minmax=gal.select(F.min("z"),F.max("z")).first()
+zmin=minmax[0]
+zmax=minmax[1]
+Nbins=100
+dz=(zmax-zmin)/Nbins
+timer.print(ana)
+
+
+ana="count"
 print("N={}".format(gal.count()))
 timer.print(ana)
 
@@ -68,14 +87,6 @@ timer.print(ana)
 
 ana="stat all"
 gal.describe().show()
-timer.print(ana)
-
-ana="minmax"
-minmax=gal.select(F.min("z"),F.max("z")).first()
-zmin=minmax[0]
-zmax=minmax[1]
-Nbins=100
-dz=(zmax-zmin)/Nbins
 timer.print(ana)
 
 ana="histo (pUDF)"
