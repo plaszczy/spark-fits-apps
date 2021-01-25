@@ -33,15 +33,15 @@ class Timer:
         return self.dt        
 
 
-#main
-decpart=int(sys.argv[1])
+#input
+fin=os.environ['SKYSIM']
 
-ff=os.environ['SKYSIM']
-ff="/global/cscratch1/sd/plaszczy/Skysim5000/skysim5000_v1.1.1_parquet"
-ff="/global/cscratch1/sd/plaszczy/skysim5000_sub13.parquet"
-
+fin="/global/cscratch1/sd/plaszczy/Skysim5000/skysim5000_v1.1.1_parquet"
 print("*"*50)
-print(ff)
+print(fin)
+
+fout="/global/cscratch1/sd/plaszczy/skysim5000_sub13.parquet"
+
 
 spark = SparkSession.builder.getOrCreate()
 sc=spark.sparkContext
@@ -54,11 +54,18 @@ logger.LogManager.getLogger("akka").setLevel(level)
 
 timer=Timer()
 ana="load"
-df_all=spark.read.parquet(ff)
+df_all=spark.read.parquet(fin)
+df_all.printSchema()
+timer.print(ana)
 
+ana="sub_extract"
 #partitions
+#decimate defualt nmber of parttions
+decpart=10
+
 numPart=df_all.rdd.getNumPartitions()
 nrepart=numPart//decpart
+
 gal=df_all.coalesce(nrepart)
 print("defaut #parts={}, new one={}".format(numPart,nrepart))
 
@@ -66,58 +73,15 @@ print("defaut #parts={}, new one={}".format(numPart,nrepart))
 cols=["galaxy_id","ra","dec","redshift","shear_1","shear_2"]
 for b in ['u','g','r','i','z','y']:
     cols+=["mag_{}".format(b)]
-#gal=gal.select(cols)
-gal=gal.select("ra","dec","redshift","mag_i")
 
+gal=gal.select(cols)
 #filter
-gal=gal.filter(df_all['mag_i']<25.3)
+gal=gal.filter(gal['mag_i']<25.3)
 
-gal=gal.withColumnRenamed("redshift","z").cache()
-
-gal.printSchema()
 timer.print(ana)
 print("#gal parts={}".format(gal.rdd.getNumPartitions()))
 
 ####
 
-ana="count(cache)"
-print("N={}G".format(gal.count()/1e9))
-timer.print(ana)
-
-#reduce parts
-#nodes=int(os.environ['SLURM_JOB_NUM_NODES'])-1
-#ncores=nodes*32
-#npart=ncores*3
-#gal=gal.coalesce(npart)
-#print("#gal comput parts={}".format(gal.rdd.getNumPartitions()))
-
-
-ana="minmax"
-minmax=gal.select(F.min("z"),F.max("z")).first()
-zmin=minmax[0]
-zmax=minmax[1]
-Nbins=100
-dz=(zmax-zmin)/Nbins
-timer.print(ana)
-
-
-#####
-ana="stat z"
-gal.describe(['z']).show()
-timer.print(ana)
-
-ana="stat all"
-gal.describe().show()
-timer.print(ana)
-
-ana="histo (pUDF)"
-@pandas_udf("float", PandasUDFType.SCALAR)
-def binFloat(z):
-    return pd.Series((z-zmin)/dz)
-#dont know how to cast in pd so do it later
-p_udf=gal.select(gal.z,binFloat("z").astype('int').alias('bin')).groupBy("bin").count().orderBy(F.asc("bin")).toPandas()
-timer.print(ana)
-
-
-###############
+gal.write.option("compression","snappy").parquet(fout)
 
