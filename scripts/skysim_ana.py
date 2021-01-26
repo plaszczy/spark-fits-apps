@@ -12,6 +12,9 @@ import numpy as np
 import healpy as hp
 import os,sys
 
+sys.path.insert(0,os.path.join(os.getcwd(),".."))
+from df_tools import df_hist
+
 from time import time
 class Timer:
     """
@@ -36,10 +39,12 @@ class Timer:
 #main
 decpart=int(sys.argv[1])
 
-ff=os.environ['SKYSIM']
-ff="/global/cscratch1/sd/plaszczy/Skysim5000/skysim5000_v1.1.1_parquet"
-ff="/global/cscratch1/sd/plaszczy/skysim5000_sub13.parquet"
+#shared
+#ff=os.environ['SKYSIM']
 
+#cscratch
+ff="/global/cscratch1/sd/plaszczy/Skysim5000/skysim5000_v1.1.1_parquet"
+#ff="/global/cscratch1/sd/plaszczy/Skysim5000/skysim5000_gold13.parquet"
 print("*"*50)
 print(ff)
 
@@ -66,18 +71,20 @@ print("defaut #parts={}, new one={}".format(numPart,nrepart))
 cols=["galaxy_id","ra","dec","redshift","shear_1","shear_2"]
 for b in ['u','g','r','i','z','y']:
     cols+=["mag_{}".format(b)]
-#gal=gal.select(cols)
-gal=gal.select("ra","dec","redshift","mag_i")
 
-#filter
+
+#SELECTION
+gal=gal.select(cols)
+#gal=gal.select("ra","dec","redshift","mag_i")
+#FILTER
 gal=gal.filter(df_all['mag_i']<25.3)
 
-gal=gal.withColumnRenamed("redshift","z").cache()
 
 gal.printSchema()
 timer.print(ana)
 print("#gal parts={}".format(gal.rdd.getNumPartitions()))
 
+gal=gal.cache()
 ####
 
 ana="count(cache)"
@@ -85,15 +92,15 @@ print("N={}G".format(gal.count()/1e9))
 timer.print(ana)
 
 #reduce parts
-#nodes=int(os.environ['SLURM_JOB_NUM_NODES'])-1
-#ncores=nodes*32
-#npart=ncores*3
-#gal=gal.coalesce(npart)
-#print("#gal comput parts={}".format(gal.rdd.getNumPartitions()))
+nodes=int(os.environ['SLURM_JOB_NUM_NODES'])-1
+ncores=nodes*32
+npart=ncores*3
+gal=gal.coalesce(npart)
+print("#gal comput parts={}".format(gal.rdd.getNumPartitions()))
 
 
 ana="minmax"
-minmax=gal.select(F.min("z"),F.max("z")).first()
+minmax=gal.select(F.min("redshift"),F.max("redshift")).first()
 zmin=minmax[0]
 zmax=minmax[1]
 Nbins=100
@@ -102,20 +109,26 @@ timer.print(ana)
 
 
 #####
-ana="stat z"
-gal.describe(['z']).show()
+ana="stat redshift"
+gal.describe(['redshift']).show()
 timer.print(ana)
 
 ana="stat all"
 gal.describe().show()
 timer.print(ana)
 
+ana="df_hist"
+p=df_hist(gal,"redshift")
+print(p)
+timer.print(ana)
+
+
 ana="histo (pUDF)"
 @pandas_udf("float", PandasUDFType.SCALAR)
 def binFloat(z):
     return pd.Series((z-zmin)/dz)
 #dont know how to cast in pd so do it later
-p_udf=gal.select(gal.z,binFloat("z").astype('int').alias('bin')).groupBy("bin").count().orderBy(F.asc("bin")).toPandas()
+p_udf=gal.select(gal.redshift,binFloat("redshift").astype('int').alias('bin')).groupBy("bin").count().orderBy(F.asc("bin")).toPandas()
 timer.print(ana)
 
 
