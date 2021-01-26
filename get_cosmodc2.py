@@ -29,7 +29,7 @@ level = getattr(logger.Level, "WARN")
 logger.LogManager.getLogger("org"). setLevel(level)
 logger.LogManager.getLogger("akka").setLevel(level)
 
-#
+
 timer=Timer()
 #
 timer.start()
@@ -46,7 +46,9 @@ df_all.printSchema()
 
 #SELECTION
 
-df=df_all.select('ra','dec','mag_i')
+df=df_all.select('ra','dec','redshift','mag_i')
+df=df.filter(df.mag_i<25.3)
+
 
 #cols="ra,dec,redshift"
 #bands=['u','g','r','i','z','y']
