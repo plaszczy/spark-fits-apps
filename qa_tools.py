@@ -8,7 +8,7 @@ from scipy import stats
 from matplotlib import pyplot as plt
 
 #nside=131072
-nside=2048
+nside=256
 nest=False
 
 pixarea=hp.nside2pixarea(nside, degrees=True)*3600

@@ -47,7 +47,7 @@ df_all.printSchema()
 #SELECTION
 
 df=df_all.select('ra','dec','redshift','mag_i')
-df=df.filter(df.mag_i<25.3)
+#df=df.filter(df.mag_i<25.3)
 
 
 #cols="ra,dec,redshift"
@@ -85,6 +85,11 @@ df=add_healpixels(df)
 #CACHE
 #print("caching...")
 #df=df.cache()
+
+ncores=int(os.environ['NCORES'])
+npart=3*ncores
+df=df.coalesce(npart)
+print("new parts={}".format(df.rdd.getNumPartitions()))
 
 true24=df.filter(df.mag_i<24).cache()
 print("size={} M".format(true24.count()/1e6))
